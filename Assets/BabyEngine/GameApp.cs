@@ -11,6 +11,9 @@ namespace BabyEngine {
         public string CustomSearchPath;
 
         private void Awake() {
+            // load pb
+            lua.AddBuildin("pb", XLua.LuaDLL.Lua.LoadPB);
+
             InitManager();
             Screen.fullScreen = true;
             Screen.SetResolution(Display.main.systemWidth, Display.main.systemHeight, true, 60);
@@ -42,7 +45,7 @@ namespace BabyEngine {
             lua.DoString(luaCode);
 
             lua.Global.Set("ResourceManager", ResourceManager.Get());
-            lua.DoString("require('framework.init_babyengine')");
+            lua.DoString("require('framework.init')");
         }
 
         private void RunLua() {

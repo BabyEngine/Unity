@@ -41,6 +41,8 @@ namespace BabyEngine {
                 ".mp3", ".ogg", ".wav", ".aif", ".xm", ".mod", ".it", ".s3m",
                 // 3d
                 ".fbx", ".obj", ".dae", ".3ds", ".dxf",
+                // misc
+                ".prefab", ".asset"
             };
             UObject obj = null;
             foreach (var ext in exts) {
