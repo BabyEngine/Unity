@@ -67,3 +67,13 @@ function LuaUtils.UI.FindSlider(transform, name)
     if not node then return end
     return node:GetComponent(typeof(CS.UnityEngine.UI.Slider))
 end
+
+-- @luadoc 查找节点
+-- @params transform Transform the transform
+-- @params child     function  callback
+function LuaUtils.TransformForeach(transform, cb)
+    local count = transform.childCount - 1
+    for i=1, count do
+        cb(transform:GetChild(i-1))
+    end
+end
