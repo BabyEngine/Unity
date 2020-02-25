@@ -77,3 +77,45 @@ function LuaUtils.TransformForeach(transform, cb)
         cb(transform:GetChild(i-1))
     end
 end
+
+-- @luadoc 查找
+-- @params transform Transform the transform
+-- @params name      string name of child
+-- @params child     function  callback
+function LuaUtils.UI.BindClick(transform, name, cb)
+    local tra = transform:Find(name)
+    if not tra then return end
+    local handler = tra:GetComponent(typeof(CS.UIEventHandler))
+    if not handler then
+        handler = tra.gameObject:AddComponent(typeof(CS.UIEventHandler))
+    end
+    -- -1 左键
+    -- -2 右键
+    handler.onPointerClick = function ( eventData )
+        if eventData.pointerId ~= -1 then
+            return
+        end
+        cb()
+    end
+    -- 动画
+    local tween = nil
+    local dt = 0.1
+    local scale = 0.95
+    handler.onPointerDown = function ( eventData )
+        if eventData.pointerId ~= -1 then
+            return
+        end
+        tween = tra:DOScale(scale, dt):SetUpdate(true)
+    end
+    handler.onPointerUp = function ( eventData )
+        if eventData.pointerId ~= -1 then
+            return
+        end
+        if tween then
+            tween:Kill()
+        end
+        tra:DOScale(1, dt):SetUpdate(true)
+    end
+    -- 音效
+
+end
