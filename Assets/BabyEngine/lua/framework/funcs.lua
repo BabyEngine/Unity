@@ -123,3 +123,7 @@ function table.tostring(data)
     dump(data, 0)
     return buffer
 end
+
+-- 导出常用Unity函数
+Destroy = CS.UnityEngine.Object.Destroy
+Instantiate = CS.UnityEngine.Object.Instantiate

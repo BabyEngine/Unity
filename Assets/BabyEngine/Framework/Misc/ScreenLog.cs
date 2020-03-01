@@ -21,6 +21,8 @@ public class ScreenLog : MonoBehaviour {
     public bool show;
     bool collapse;
 
+    public bool ShowOnGUIButton;
+
     // Visual elements:
 
     static readonly Dictionary<LogType, Color> logTypeColors = new Dictionary<LogType, Color>()
@@ -38,6 +40,7 @@ public class ScreenLog : MonoBehaviour {
     Rect titleBarRect = new Rect(0, 0, 10000, 20);
     GUIContent clearLabel = new GUIContent("Clear", "Clear the contents of the console.");
     GUIContent collapseLabel = new GUIContent("Collapse", "Hide repeated messages.");
+    GUIContent closeLabel = new GUIContent("Close", "Close console.");
 
     void OnEnable() {
         //Application.RegisterLogCallback(HandleLog);
@@ -56,6 +59,13 @@ public class ScreenLog : MonoBehaviour {
     }
 
     void OnGUI() {
+        if (ShowOnGUIButton && !show) {
+            string content = show ? "Hide Log" : "Show Log";
+            if (GUI.Button(new Rect(0, 0, 100, 25), content)) { // onclicked
+                show = !show;
+            }
+        }
+
         if (!show) {
             return;
         }
@@ -95,6 +105,9 @@ public class ScreenLog : MonoBehaviour {
 
         if (GUILayout.Button(clearLabel)) {
             logs.Clear();
+        }
+        if (GUILayout.Button(closeLabel)) {
+            show = false;
         }
 
         collapse = GUILayout.Toggle(collapse, collapseLabel, GUILayout.ExpandWidth(false));

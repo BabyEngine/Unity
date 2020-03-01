@@ -16,6 +16,8 @@ namespace uKCP {
         }
         public Action<object> OnError;
         public Action<byte[]> OnData;
+        public Action OnOpen;
+        private bool hasComunication;
 
         public void Connect(string addr, int port) {
             if (session != null) {
@@ -27,7 +29,7 @@ namespace uKCP {
             session.onError = this.onError;
 
             session.Connect(addr, port);
-            Debug.Log($"do conn{addr}:{port}");
+            //Debug.Log($"do conn{addr}:{port}");
         }
 
         public void Send(byte[] data) {
@@ -68,7 +70,9 @@ namespace uKCP {
                 return;
             } else {
                 // read data ok
-                onData(buf);
+                var data = new byte[n];
+                Buffer.BlockCopy(buf, 0, data, 0, n);
+                onData(data);
             }
         }
 
@@ -76,6 +80,10 @@ namespace uKCP {
             OnError?.Invoke(err);
         }
         void onData(byte[] data) {
+            if (hasComunication == false) {
+                hasComunication = true;
+                OnOpen?.Invoke();
+            }
             OnData?.Invoke(data);
         }
     }

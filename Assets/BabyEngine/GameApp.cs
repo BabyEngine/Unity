@@ -27,6 +27,7 @@ namespace BabyEngine {
 
         private void InitManager() {
             gameObject.AddComponent<ResourceManager>();
+            gameObject.AddComponent<LooperManager>();
         }
 
         private void InitLua() {
@@ -45,6 +46,7 @@ namespace BabyEngine {
             lua.DoString(luaCode);
 
             lua.Global.Set("ResourceManager", ResourceManager.Get());
+            lua.Global.Set("LooperManager", LooperManager.Get());
             lua.DoString("require('framework.init')");
         }
 
