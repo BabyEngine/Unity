@@ -1,20 +1,20 @@
 net = net or {}
 
 -- 协议类型
-local OPCODE_OPEN  = 0
-local OPCODE_CLOSE = 1
-local OPCODE_PING  = 2
-local OPCODE_PONG  = 3
-local OPCODE_DATA  = 4
-local OPCODE_NOOP  = 5
-local OPCODE_TURN  = 6
+local OPCODE_OPEN  = 0 -- 链路打开
+local OPCODE_CLOSE = 1 -- 链路关闭
+local OPCODE_PING  = 2 -- ping指令
+local OPCODE_PONG  = 3 -- pong指令
+local OPCODE_DATA  = 4 -- 数据消息
+local OPCODE_TURN  = 5 -- 切换线路 |1byte|string bytes| => |数据类型|连接地址| => |0|1.1.1.1:53|
+local OPCODE_NOOP  = 6 -- 链路踢出
+
 
 function net.NewBinaryProtocol()
     local self = {}
     self.buffer = ''
     self.startParse = false
     function self.Read(data)
-        -- print('?>>>>', string.len(data))
         --string.concat
         if string.len(self.buffer) == 0 then
             self.buffer = data
@@ -48,7 +48,7 @@ function net.NewBinaryProtocol()
             self.msgLen = 0
             self.startParse = false
 
-            self.onMessage(bodyBytes)
+            self.OnMessage(bodyBytes)
         end
     end
 
