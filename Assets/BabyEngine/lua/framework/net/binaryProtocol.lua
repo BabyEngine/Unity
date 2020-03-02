@@ -34,6 +34,7 @@ function net.NewBinaryProtocol()
             local len = h2 << 16 | h3 << 8 | h4
             self.startParse = true
             self.msgLen = len
+            self.msgType = h1
             -- copy other bytes
             self.buffer = string.char(string.byte(self.buffer, 5, string.len(self.buffer)))
         end
@@ -47,8 +48,9 @@ function net.NewBinaryProtocol()
             self.buffer = string.char(string.byte(self.buffer, self.msgLen + 1, string.len(self.buffer)))
             self.msgLen = 0
             self.startParse = false
-
-            self.OnMessage(bodyBytes)
+            if self.msgType == OPCODE_DATA then
+                self.OnMessage(bodyBytes)
+            end
         end
     end
 
