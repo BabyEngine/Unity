@@ -5,6 +5,31 @@ self.OnGUIFuncList       = {}
 self.FixedUpdateFuncList = {}
 self.LateUpdateFuncList  = {}
 
+local delayCallbacks = {}
+
+local function onUpdate()
+    local keep ={}
+    for i,v in ipairs(delayCallbacks) do
+        if Time.time > v.time then
+            v.cb()
+        else
+            table.insert(keep, v)
+        end
+    end
+    delayCallbacks = keep
+end
+
+
+-- @luadoc 在 Update 中延迟调用
+-- @params delay double 延迟秒数量
+-- @params cb function 回调函数
+function self.AfterFunc(delay, cb )
+    if type(cb) ~= 'function' then return end
+    delay = delay
+    if delay < 0 then delay = 0 end
+    table.insert(delayCallbacks, {cb=cb, time = Time.time + delay})
+end
+
 -- @luadoc 增加 Update 回调
 -- @params cb function 回调函数
 function self.AddUpdate(cb)
@@ -17,6 +42,7 @@ function self.RemoveUpdate(cb)
 end
 -- @luadoc Update 回调执行器
 LooperManager.UpdateFunc = function()
+    onUpdate()
     for k,v in pairs(self.UpdateList) do
         if type(v) == 'function' then
             v()

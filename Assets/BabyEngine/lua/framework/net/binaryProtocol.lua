@@ -6,9 +6,10 @@ local OPCODE_CLOSE = 1 -- 链路关闭
 local OPCODE_PING  = 2 -- ping指令
 local OPCODE_PONG  = 3 -- pong指令
 local OPCODE_DATA  = 4 -- 数据消息
-local OPCODE_TURN  = 5 -- 切换线路 |1byte|string bytes| => |数据类型|连接地址| => |0|1.1.1.1:53|
+local OPCODE_TURN  = 5 -- 切换线路 |string bytes| => |连接地址| => |1.1.1.1:53|
 local OPCODE_NOOP  = 6 -- 链路踢出
-
+local OPCODE_REQ   = 7 -- 发送请求
+local OPCODE_RESP  = 8 -- 收到回复
 
 function net.NewBinaryProtocol()
     local self = {}
@@ -48,21 +49,42 @@ function net.NewBinaryProtocol()
             self.buffer = string.char(string.byte(self.buffer, self.msgLen + 1, string.len(self.buffer)))
             self.msgLen = 0
             self.startParse = false
-            if self.msgType == OPCODE_DATA then
-                self.OnMessage(bodyBytes)
-            end
+            self.OnMessage(self.msgType, bodyBytes)
         end
     end
 
-    function self.Write(body, cb)
+    function self.Write(opCode, body, cb)
         -- header
+        if body then
+            local len = string.len(body)
+            local h1 = opCode
+            local h2 = (len & 0x00ff0000) >> 16
+            local h3 = (len & 0x0000ff00) >> 8
+            local h4 = (len & 0x000000ff)
+            local all = string.char(h1, h2, h3, h4, string.byte(body, 1, len))
+            cb(all)
+        else
+            local all = string.char(opCode, 0, 0, 0)
+            cb(all)
+        end
+    end
+
+    function self.EncodeRequest( reqId, body )
         local len = string.len(body)
-        local h1 = 0
-        local h2 = (len & 0x00ff0000) >> 16
-        local h3 = (len & 0x0000ff00) >> 8
-        local h4 = (len & 0x000000ff)
-        local all = string.char(h1, h2, h3, h4, string.byte(body, 1, len))
-        cb(all)
+        local h1 = (reqId & 0x00ff0000) >> 24
+        local h2 = (reqId & 0x00ff0000) >> 16
+        local h3 = (reqId & 0x0000ff00) >> 8
+        local h4 = (reqId & 0x000000ff)
+        return string.char(h1, h2, h3, h4, string.byte(body, 1, len))
+    end
+    function self.DecodeRequest( data )
+        local h1 = string.byte(data, 1, 1)
+        local h2 = string.byte(data, 2, 2)
+        local h3 = string.byte(data, 3, 3)
+        local h4 = string.byte(data, 4, 4)
+        local reqId = h1 << 24 | h2 << 16 | h3 << 8 | h4
+        local body = string.char(string.byte(data, 5, string.len(data)))
+        return reqId, body
     end
 
     function self.Update()

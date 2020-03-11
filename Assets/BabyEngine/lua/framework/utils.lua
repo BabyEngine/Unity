@@ -6,7 +6,11 @@ LuaUtils.UI = {}
 -- @params transform Transform the transform
 -- @params child     function  callback
 function LuaUtils.Find(transform, name)
-    return transform:Find(name)
+    if transform then
+        return transform:Find(name)
+    else
+        return CS.UnityEngine.GameObject.Find(name)
+    end
 end
 
 -- @luadoc 获取 Button 组件
@@ -83,7 +87,7 @@ end
 -- @params name      string name of child
 -- @params child     function  callback
 function LuaUtils.UI.BindClick(transform, name, cb)
-    local tra = transform:Find(name)
+    local tra = LuaUtils.Find(transform, name)
     if not tra then return end
     local handler = tra:GetComponent(typeof(CS.UIEventHandler))
     if not handler then
@@ -105,7 +109,7 @@ function LuaUtils.UI.BindClick(transform, name, cb)
         if eventData.pointerId ~= -1 then
             return
         end
-        tween = tra:DOScale(scale, dt):SetUpdate(true)
+        tween = tra.transform:DOScale(scale, dt)--:SetUpdate(true)
     end
     handler.onPointerUp = function ( eventData )
         if eventData.pointerId ~= -1 then
@@ -114,7 +118,7 @@ function LuaUtils.UI.BindClick(transform, name, cb)
         if tween then
             tween:Kill()
         end
-        tra:DOScale(1, dt):SetUpdate(true)
+        tra.transform:DOScale(1, dt)--:SetUpdate(true)
     end
     -- 音效
 

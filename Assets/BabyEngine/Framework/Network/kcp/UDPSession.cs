@@ -18,14 +18,46 @@ namespace uKCP {
         public bool WriteDelay { get; set; }
         public Action<object> onError;
 
+        IPAddress GetHostAddresses(string host) {
+            IPAddress ip;
+
+            if (IPAddress.TryParse(host, out ip)) {
+                UnityEngine.Debug.LogWarning("GetHostAddresses-Host-Ip:" + ip.ToString() + ":" + ip.AddressFamily.ToString());
+                return ip;
+            } else {
+                var addresses = Dns.GetHostEntry(host).AddressList;
+                foreach (var item in addresses) {
+                    UnityEngine.Debug.LogWarning("v6-" + item.AddressFamily.ToString() + ":" + BitConverter.ToString(item.GetAddressBytes()));
+                    if (item.AddressFamily == AddressFamily.InterNetworkV6) {
+                        return item;
+                    }
+                }
+
+                foreach (var item in addresses) {
+                    UnityEngine.Debug.LogWarning("v4-" + item.AddressFamily.ToString() + ":" + BitConverter.ToString(item.GetAddressBytes()));
+                    if (item.AddressFamily == AddressFamily.InterNetwork) {
+                        return item;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         public void Connect(string host, int port) {
-            var endpoint = IPAddress.Parse(host);
-            mSocket = new Socket(endpoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-            if (mSocket == null) { // network unreachable
-                OnError("network unreachable");
+            try {
+                IPAddress endpoint = GetHostAddresses(host);
+                mSocket = new Socket(endpoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                if (mSocket == null) { // network unreachable
+                    OnError("network unreachable");
+                    return;
+                }
+                mSocket.Connect(endpoint, port);
+            } catch (Exception e) {
+                OnError(e.ToString());
                 return;
             }
-            mSocket.Connect(endpoint, port);
+
             mKCP = new KCP((uint)(new Random().Next(1, Int32.MaxValue)), rawSend);
             // normal:  0, 40, 2, 1
             // fast:    0, 30, 2, 1

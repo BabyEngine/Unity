@@ -27,7 +27,7 @@ function table.encode(...)
             if (cache[node] == nil) or (cur_index >= cache[node]) then
 
                 if (string.find(output_str, "}", output_str:len())) then
-                    output_str =  output_str .. ",\n"
+                    output_str = output_str .. ",\n"
                 elseif not (string.find(output_str, "\n", output_str:len())) then
                     output_str = output_str .. "\n"
                 end
@@ -109,10 +109,10 @@ function table.tostring(data)
                 tablecache[str] = (tablecache[str] or 0) + 1
                 buffer = buffer.."("..str..") {\n"
                 for k, v in pairs(d) do
-                    buffer = buffer..string.rep(padder, depth+1).."["..k.."] => "
-                    dump(v, depth+1)
+                    buffer = buffer..string.rep(padder, depth + 1) .. "["..k.."] => "
+                    dump(v, depth + 1)
                 end
-                buffer = buffer..string.rep(padder, depth).."}\n"
+                buffer = buffer..string.rep(padder, depth) .. "}\n"
             end
         elseif (t == "number") then
             buffer = buffer.."("..t..") "..str.."\n"
@@ -124,6 +124,25 @@ function table.tostring(data)
     return buffer
 end
 
--- 导出常用Unity函数
-Destroy = CS.UnityEngine.Object.Destroy
-Instantiate = CS.UnityEngine.Object.Instantiate
+function string.split (inputstr, sep)
+    if sep == nil then
+        sep = "%s"
+    end
+    local t = {}
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+        table.insert(t, str)
+    end
+    return t
+end
+
+function string.fromHex(str)
+    return (str:gsub('..', function (cc)
+        return string.char(tonumber(cc, 16))
+    end))
+end
+
+function string.toHex(str)
+    return (str:gsub('.', function (c)
+        return string.format('%02X ', string.byte(c))
+    end))
+end
