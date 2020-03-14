@@ -2,6 +2,7 @@
 Destroy = CS.UnityEngine.Object.Destroy
 Instantiate = CS.UnityEngine.Object.Instantiate
 GameObject = CS.UnityEngine.GameObject
+Time = CS.UnityEngine.Time
 
 function Int32ToBytes(int)
     if type(int) ~= 'number' then return end

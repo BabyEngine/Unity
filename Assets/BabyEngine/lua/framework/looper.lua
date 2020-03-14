@@ -1,3 +1,6 @@
+LooperManager = LooperManager or {}
+Time = Time or {time=0}
+
 Looper = {}
 local self = Looper
 self.UpdateList          = {}
