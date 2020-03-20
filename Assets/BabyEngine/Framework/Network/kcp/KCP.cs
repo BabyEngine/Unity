@@ -186,9 +186,9 @@ namespace uKCP {
         UInt32 ts_probe; UInt32 probe_wait;
         UInt32 dead_link; UInt32 incr;
 
-        Int32 fastresend;
-        Int32 nocwnd;
-        Int32 stream;
+        Int32 fastresend=0;
+        Int32 nocwnd=0;
+        Int32 stream=0;
 
         List<Segment> snd_queue = new List<Segment>(16);
         List<Segment> rcv_queue = new List<Segment>(16);
@@ -367,7 +367,9 @@ namespace uKCP {
                 var seg = Segment.Get(size);
                 seg.data.WriteBytes(buffer, readIndex, size);
                 readIndex += size;
+                if (stream != -1) {
 
+                }
                 seg.frg = (stream == 0 ? (byte)(count - i - 1) : (byte)0);
                 snd_queue.Add(seg);
             }
@@ -814,6 +816,7 @@ namespace uKCP {
 
                     if (segment.xmit >= dead_link) {
                         state = 0xFFFFFFFF;
+                        if (state > 0) { }
                     }
                 }
 

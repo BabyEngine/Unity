@@ -11,7 +11,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Game/Hunter/game.unity
     guid: b821bb5d99705634b995e289014f846a
-  - enabled: 1
+  - enabled: 0
     path: Assets/Game/PlayMore/Main.unity
     guid: 2b9204d3545c8fa42a8ad22ff609476a
+  - enabled: 1
+    path: Assets/Game/Valkyrja/scenes/main.unity
+    guid: 301dffae212741c4691185034b504bb1
   m_configObjects: {}

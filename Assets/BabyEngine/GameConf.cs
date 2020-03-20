@@ -7,14 +7,12 @@ using DG.Tweening;
 
 namespace BabyEngine {
     public static class GameConf {
-        public static readonly string LUA_BASE_PATH = "BabyEngine/lua/";
+        
         public static string CustomLuaGame;
-        /// <summary>
-        /// 
-        /// </summary>
-        public static void T() {
-            Slider slider = null;
-            slider.DOValue(1, 0.5f);
-        }      
+        public static readonly string LUA_PATH = "__lua_dir__/";
+        #region DO NOT MODIFY!!!
+        public static readonly string LUA_BASE_PATH = "BabyEngine/lua/";
+        public static readonly string LUA_FRAMEWORK = "lua-framework.unity3d";
+        #endregion
     }
 }

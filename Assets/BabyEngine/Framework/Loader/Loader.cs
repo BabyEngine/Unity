@@ -12,7 +12,10 @@ namespace BabyEngine {
             if (currentLoader == null) {
                 currentLoader = new EditorLoader();
             }
-
+#elif UNITY_ANDROID
+            if (currentLoader == null) {
+                currentLoader = new AndroidLoader();
+            }
 #elif UNITY_WEBGL
             if (currentLoader == null) {
                 currentLoader = new WebGLLoader();
