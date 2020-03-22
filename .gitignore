@@ -6,3 +6,4 @@ Temp/
 Assets/Game/*.meta
 Assets/Game/
 android.apk
+obj/

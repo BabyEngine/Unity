@@ -10,8 +10,6 @@ namespace BabyEngine {
         public override byte[] Load(ref string filepath) {
             byte[] result;
             // 优先加载外部代码
-            //result = TryLoadByPath(Application.persistentDataPath + "/" + GameConf.CustomLuaGame, ref filepath);
-            //if (result != null) { return result; }
             result = TryLoadByPath(Application.persistentDataPath+"/", ref filepath);
             if (result != null) { return result; }
             //// 加载内嵌代码 android 没有内嵌代码

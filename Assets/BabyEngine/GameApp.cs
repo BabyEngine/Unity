@@ -20,54 +20,8 @@ namespace BabyEngine {
             Screen.fullScreen = true;
             Screen.SetResolution(Display.main.systemWidth, Display.main.systemHeight, true, 60);
         }
-        #region 安装
-        // 检查是否安装
-        bool checkIsInstall() {
-            return false;
-        }
-        // 执行安装
-        void doInstall(Action cb) {
-            var installFlag = $"{Application.persistentDataPath }/installed";
-            if (File.Exists(installFlag)) {
-                cb();
-                return;
-            } else {
-                // 展开framework
-                StartCoroutine(LoadAssetBundleFromStreamingAssetsCoroutine(GameConf.LUA_FRAMEWORK, $"{Application.streamingAssetsPath}/{GameConf.LUA_FRAMEWORK}", (ab)=> {
-                    var names = ab.GetAllAssetNames();
-                    foreach (var name in names) {
-                        var ta = ab.LoadAsset<TextAsset>(name);
-                        // 替换前缀
-                        var lsf = LuaSourceFile.FromJson(ta.text);
-                        if (lsf != null) {
-                            var outPath = Path.Combine(Application.persistentDataPath, lsf.OutFile);
-                            var dir = Path.GetDirectoryName(outPath);
-                            Directory.CreateDirectory(dir);
-                            File.WriteAllText(outPath, lsf.code);
-                            Debug.Log($"install {outPath}");
-                        }
-                    }
-                    File.WriteAllText(installFlag, "");
-                    cb();
-                }));
-            }
-        }
-        private IEnumerator LoadAssetBundleFromStreamingAssetsCoroutine(string bundleName, string path, Action<AssetBundle> handler) {
-            // Loading asset bundle
-            var req = AssetBundle.LoadFromFileAsync(path);
-            yield return req;
-
-            Assert.IsNotNull(req.assetBundle, "AssetBundleLoader : asset bundle wans't loaded from streaming assets");
-            Assert.IsNotNull(handler, "No callback handler");
-
-            if (req.assetBundle == null) {
-                handler(null);
-                yield break;
-            }
-
-            handler(req.assetBundle);
-        }
-        #endregion
+         
+         
 
         private void Start() {
             onLuaStart(()=> {
@@ -77,10 +31,10 @@ namespace BabyEngine {
         }
 
         void onLuaStart(Action cb) {
-            if (checkIsInstall()) {
+            if (Installer.IsInstall()) {
                 cb();
             } else {
-                doInstall(cb);
+                Installer.DoInstall(cb);
             }
         }
 

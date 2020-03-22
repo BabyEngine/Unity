@@ -60,6 +60,7 @@ function net.NewKCPBinaryClient(address, port)
         local reqId, data = p.DecodeRequest(msg)
         local opt = reqMap[reqId]
         if opt then
+            reqMap[reqId] = nil -- 已回复就删除回调
             opt.cb(data)
         end
     end
