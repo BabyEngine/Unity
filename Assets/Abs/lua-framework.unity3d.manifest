@@ -1,0 +1,25 @@
+ManifestFileVersion: 0
+CRC: 872579602
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 8b199572f5c9c6543a350206251bf68b
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 5ad585dd02dfb5016c0dad519eab8f49
+HashAppended: 0
+ClassTypes:
+- Class: 49
+  Script: {instanceID: 0}
+Assets:
+- Assets/__lua_dir__/framework/update.json
+- Assets/__lua_dir__/framework/looper.json
+- Assets/__lua_dir__/framework/logger.json
+- Assets/__lua_dir__/framework/utils.json
+- Assets/__lua_dir__/protobuf/protoc.json
+- Assets/__lua_dir__/framework/init.json
+- Assets/__lua_dir__/framework/net/binaryProtocol.json
+- Assets/__lua_dir__/framework/funcs.json
+- Assets/__lua_dir__/framework/types.json
+- Assets/__lua_dir__/framework/net/KCPBinaryClient.json
+Dependencies: []
