@@ -6,5 +6,3 @@ require('framework.update')
 
 require('framework.net.binaryProtocol')
 require('framework.net.KCPBinaryClient')
-
-print('Init Babay Engine Done.', BabyEngine)

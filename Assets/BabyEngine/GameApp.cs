@@ -61,7 +61,11 @@ namespace BabyEngine {
         }
 
         private void RunLua() {
-            lua.DoString($"if not pcall(require, '{MainGameApp}') then BabyEngine.CallUpdateHelp() end");
+            lua.DoString($"local ok, ret = pcall(require, '{MainGameApp}')" +
+                $"if not ok then " +
+                $"  print(ret)" +
+                $"  BabyEngine.CallUpdateHelp() " +
+                $"end");
         }
     }
 }
