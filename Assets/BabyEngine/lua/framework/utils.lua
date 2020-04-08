@@ -72,6 +72,16 @@ function LuaUtils.UI.FindSlider(transform, name)
     return node:GetComponent(typeof(CS.UnityEngine.UI.Slider))
 end
 
+-- @luadoc 获取 InputField 组件
+-- @params transform Transform the transform
+-- @params transform string    name of child
+function LuaUtils.UI.FindInputField(transform, name)
+    local node = LuaUtils.Find(transform, name)
+    if not node then return end
+    return node:GetComponent(typeof(CS.UnityEngine.UI.InputField))
+end
+
+
 -- @luadoc 查找节点
 -- @params transform Transform the transform
 -- @params child     function  callback
