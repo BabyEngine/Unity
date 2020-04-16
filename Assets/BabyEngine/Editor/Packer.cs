@@ -40,6 +40,9 @@ namespace BabyEngine {
 
         [MenuItem("Tools/Build/Android")]
         public static void BuildAndroid() {
+            // 
+            BuildLua();
+            //
             var startTime = DateTime.Now;
             List<string> levels = new List<string>();
             foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes) {
@@ -61,64 +64,87 @@ namespace BabyEngine {
 
         #region 打包lua
         public static void makeLuaAssetBundle(string subDir, string outputPath) {
-            var startTime = DateTime.Now;
-            string luaDir = $"{Application.dataPath}/{subDir}";
-            List<string> luaFiles = DirSearch(luaDir);
-            // ignore .meta  files
-            luaFiles.RemoveAll(x => x.EndsWith(".meta"));
-            var outLuaFile = luaFiles.Select(s => s.Replace($"{Application.dataPath}/{subDir}", "lua/")).ToList();
-            // 
-            outLuaFile = luaFiles.Select(s => "lua/" + s).ToList();
-            // create
-            List<LuaSourceFile> luaSources = new List<LuaSourceFile>();
-            foreach (var file in luaFiles) {
-                var bytes = File.ReadAllBytes(file);
-                if (bytes != null) {
-                    luaSources.Add(new LuaSourceFile() {
-                        OutFile = file.Replace(luaDir, GameConf.LUA_PATH).Replace("\\", "/").Replace(".lua", ".json"),
-                        code = bytes.ToUTF8String()
-                    });
+            try {
+                var startTime = DateTime.Now;
+                string luaDir = $"{Application.dataPath}/{subDir}";
+                List<string> luaFiles = DirSearch(luaDir);
+                // ignore .meta  files
+                luaFiles.RemoveAll(x => x.EndsWith(".meta"));
+                var outLuaFile = luaFiles.Select(s => s.Replace($"{Application.dataPath}/{subDir}", "lua/")).ToList();
+                // 
+                outLuaFile = luaFiles.Select(s => "lua/" + s).ToList();
+                // create
+                List<LuaSourceFile> luaSources = new List<LuaSourceFile>();
+                foreach (var file in luaFiles) {
+                    var bytes = File.ReadAllBytes(file);
+                    if (bytes != null) {
+                        luaSources.Add(new LuaSourceFile() {
+                            OutFile = file.Replace(luaDir, GameConf.LUA_TEMP_PATH).Replace("\\", "/").Replace(".lua", ".json"),
+                            code = bytes.ToUTF8String()
+                        });
+                    }
                 }
+                // create .bytes asset
+                int count = 0;
+                List<string> luaPaths = new List<string>();
+                foreach (var src in luaSources) {
+                    var tmp = Application.dataPath + $"/" + src.OutFile;
+                    var dir = Path.GetDirectoryName(tmp);
+                    Directory.CreateDirectory(dir);
+                    var outfile = $"Assets/{src.OutFile}";
+                    src.OutFile = src.OutFile.Replace(GameConf.LUA_TEMP_PATH, "").Replace(".json", ".lua");
+
+                    File.WriteAllText(outfile, src.ToString());
+                    luaPaths.Add(outfile);
+                    count++;
+                }
+                AssetDatabase.Refresh();
+                //Create the array of bundle build details.
+                string abPath = Path.GetDirectoryName(outputPath);
+                string abName = Path.GetFileName(outputPath);
+                List<AssetBundleBuild> buildMap = new List<AssetBundleBuild>();
+                AssetBundleBuild build = new AssetBundleBuild();
+                build.assetBundleName = abName;
+                build.assetNames = luaPaths.ToArray();
+
+                buildMap.Add(build);
+
+                Directory.CreateDirectory(abPath);
+                BuildPipeline.BuildAssetBundles(GameConf.AB_PATH, buildMap.ToArray(), BuildAssetBundleOptions.None, BuildTarget.Android);
+               
+                AssetDatabase.Refresh();
+                // 复制 GameConf.LUA_FRAMEWORK
+                var destPath = $"{Application.streamingAssetsPath}/{abName}";
+                Directory.CreateDirectory(Application.streamingAssetsPath);
+                
+                File.Copy(outputPath, destPath, true);
+                AssetDatabase.Refresh();
+
+                var elapsedTime = DateTime.Now.Subtract(startTime);
+                FileInfo fileInfo = new FileInfo(outputPath);
+                var version = $"{fileInfo.CreationTime.ToFileTimeUtc()}";
+                if (!Directory.Exists("Assets/Resources")) {
+                    Directory.CreateDirectory("Assets/Resources");
+                }
+                File.WriteAllText("Assets/Resources/baby_version.txt", version);
+                Debug.Log($"copy {count} lua files, elapsed time:{elapsedTime} version:{version}");
+                
+            } catch (Exception e) {
+                Debug.LogError(e);
+            } finally {
+                // 清理战场
+                DeleteDir($"Assets/{GameConf.LUA_TEMP_PATH}");
+                DeleteDir(GameConf.AB_PATH);
+                AssetDatabase.Refresh();
             }
-            // create .bytes asset
-            int count = 0;
-            List<string> luaPaths = new List<string>();
-            foreach (var src in luaSources) {
-                var tmp = Application.dataPath + $"/" + src.OutFile;
-                var dir = Path.GetDirectoryName(tmp);
-                Directory.CreateDirectory(dir);
-                var outfile = $"Assets/{src.OutFile}";
-                src.OutFile = src.OutFile.Replace(GameConf.LUA_PATH, "").Replace(".json", ".lua");
-
-                File.WriteAllText(outfile, src.ToString());
-                luaPaths.Add(outfile);
-                count++;
+        }
+        private static void DeleteDir(string dir) {
+            if (Directory.Exists(dir)) {
+                Directory.Delete(dir, true);
             }
-            AssetDatabase.Refresh();
-            //Create the array of bundle build details.
-            string abPath = Path.GetDirectoryName(outputPath);
-            string abName = Path.GetFileName(outputPath);
-            List<AssetBundleBuild> buildMap = new List<AssetBundleBuild>();
-            AssetBundleBuild build = new AssetBundleBuild();
-            build.assetBundleName = abName;
-            build.assetNames = luaPaths.ToArray();
-
-            buildMap.Add(build);
-
-            
-            Directory.CreateDirectory(abPath);
-            BuildPipeline.BuildAssetBundles("Assets/ABs", buildMap.ToArray(), BuildAssetBundleOptions.None, BuildTarget.Android);
-            // 清理战场
-            string buildDir = $"Assets/{GameConf.LUA_PATH}";
-            Directory.Delete(buildDir, true);
-            File.Delete($"{buildDir.Remove(buildDir.Length - 1)}.meta");
-            // 复制 GameConf.LUA_FRAMEWORK
-            Directory.CreateDirectory(Application.streamingAssetsPath);
-            File.Copy(outputPath, $"{Application.streamingAssetsPath}/{abName}", true);
-            AssetDatabase.Refresh(); 
-
-            var elapsedTime = DateTime.Now.Subtract(startTime);
-            Debug.Log($"copy {count} lua files, elapsed time:{elapsedTime}");
+            if (File.Exists($"{dir.Remove(dir.Length - 1)}.meta")) {
+                File.Delete($"{dir.Remove(dir.Length - 1)}.meta");
+            }
         }
         #endregion
     }

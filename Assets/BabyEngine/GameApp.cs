@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Networking;
 using XLua;
 
 namespace BabyEngine {
@@ -11,6 +12,7 @@ namespace BabyEngine {
         private LuaEnv lua = new LuaEnv();
         public string MainGameApp;
         public string CustomSearchPath;
+        public string StartupUrl;
 
         private void Awake() {
             // load pb
@@ -20,14 +22,57 @@ namespace BabyEngine {
             Screen.fullScreen = true;
             Screen.SetResolution(Display.main.systemWidth, Display.main.systemHeight, true, 60);
         }
-         
-         
 
         private void Start() {
-            onLuaStart(()=> {
-                InitLua();
-                Invoke("RunLua", 0);
+            if (string.IsNullOrEmpty(StartupUrl)) {
+                onLuaStart(() => {
+                    InitLua();
+                    Invoke("RunLua", 0);
+                });
+            } else {
+                StartCoroutine(CheckStartup(() => {
+                    InitLua();
+                    Invoke("RunLua", 0);
+
+                },(err) => {
+                    Debug.LogError($"检查失败{err}");
+                 }));
+            }
+        }
+
+        private IEnumerator CheckStartup(Action onOk, Action<string> onErr) {
+            yield return null;
+            //UnityWebRequest request = UnityWebRequest.Get(StartupUrl);
+            //yield return request.SendWebRequest();
+            //if (request.isNetworkError || request.isHttpError) {
+            //    Debug.Log(StartupUrl);
+            //    okErr(request.error);
+            //    yield break;
+            //}
+            //string body = request.downloadHandler.text;
+            //Debug.Log(body);
+            //// TODO something
+            //onOk();
+            
+            var co = CacheableDownloadHandler.GetBytes(StartupUrl, (statusCode, header, body) => {
+                if (statusCode == 200) { // use new data
+
+                }
+                switch (statusCode) {
+                    case 200: // use new data
+                        Debug.Log(body.ToUTF8String());
+                        onOk();
+                        break;
+                    case 304: // use cache daeta
+                        Debug.Log(body.ToUTF8String());
+                        onOk();
+                        break;
+                    default:  // not respect this
+                        onErr($"http ${statusCode}");
+                        break;
+                }
             });
+            StartCoroutine(co);
         }
 
         void onLuaStart(Action cb) {

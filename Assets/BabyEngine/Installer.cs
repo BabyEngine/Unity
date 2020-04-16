@@ -8,8 +8,36 @@ using UnityEngine.Assertions;
 namespace BabyEngine {
     public class Installer : MonoBehaviour {
         private static string installFlag = $"{Application.persistentDataPath }/installed";
+        private static string FRAMEWORK_FILE = $"{Application.streamingAssetsPath}/{GameConf.LUA_FRAMEWORK}";
         public static bool IsInstall() {
-            return File.Exists(installFlag);
+            try {
+                // check flag
+                if (!File.Exists(installFlag)) {
+                    return false;
+                }
+                var versionTxt = File.ReadAllText(installFlag);
+                long version;
+                if (!long.TryParse(versionTxt, out version)) {
+                    return false;
+                }
+                long fileVersion = GetBuildVersion();
+                if (fileVersion > version) {
+                    return false;
+                }
+                return true;
+            } catch(Exception e) {
+                Debug.LogError(e);
+                return false;
+            }
+        }
+
+        private static long GetBuildVersion() {
+            long version = 0;
+            var ta = Resources.Load<TextAsset>("baby_version");
+            if (ta != null) {
+                long.TryParse(ta.text, out version);
+            }
+            return version;
         }
         public static void DoInstall(Action cb) {
             var go = new GameObject();
@@ -18,7 +46,7 @@ namespace BabyEngine {
         }
         public void doInstall(Action cb) {
             // 展开framework
-            StartCoroutine(LoadAssetBundleFromStreamingAssetsCoroutine(GameConf.LUA_FRAMEWORK, $"{Application.streamingAssetsPath}/{GameConf.LUA_FRAMEWORK}", (ab) => {
+            StartCoroutine(LoadAssetBundleFromStreamingAssetsCoroutine(GameConf.LUA_FRAMEWORK, FRAMEWORK_FILE, (ab) => {
                 try {
                     if (ab == null) {
                         // download fail
@@ -37,7 +65,10 @@ namespace BabyEngine {
                             Debug.Log($"install {outPath}");
                         }
                     }
-                    File.WriteAllText(installFlag, "");
+                    var version = $"{GetBuildVersion()}";
+
+                    Debug.Log($"install ok({version})");
+                    File.WriteAllText(installFlag, version);
                 } finally {
                     cb();
                     Destroy(gameObject);

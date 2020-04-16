@@ -9,10 +9,11 @@ namespace BabyEngine {
     public static class GameConf {
         
         public static string CustomLuaGame;
-        public static readonly string LUA_PATH = "__lua_dir__/";
+        public static readonly string LUA_TEMP_PATH = "__lua_dir__/";
         #region DO NOT MODIFY!!!
         public static readonly string LUA_BASE_PATH = "BabyEngine/lua/";
         public static readonly string LUA_FRAMEWORK = "lua-framework.unity3d";
+        public static readonly string AB_PATH = "Assets/ABs/";
         #endregion
     }
 }
