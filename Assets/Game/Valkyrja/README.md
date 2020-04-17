@@ -2,14 +2,15 @@
 
 需要配合[服务端](https://github.com/BabyEngine/Backend)使用
 
-服务端运行
+### 服务端运行
 ```
 1. 进入scripts目录
 2. 启动游戏
 GameApp-linux run games\Valkyrja\main.lua
 ```
 
-客户端需要执行修改服务端地址
+### 客户端
+
 服务端  games\Valkyrja\main.lua
 ```
 NetService.startGameServer(":8087")
