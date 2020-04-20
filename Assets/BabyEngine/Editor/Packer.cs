@@ -30,7 +30,6 @@ namespace BabyEngine {
         public static void OnPostProcessBuild(BuildTarget target, string targetPath) {
             if (target != BuildTarget.WebGL)
                 return;
-            Debug.Log("替换文件咯");
             var path = Path.Combine(targetPath, "Build/UnityLoader.js");
             var text = File.ReadAllText(path);
             text = text.Replace("UnityLoader.SystemInfo.mobile", "false");
@@ -114,19 +113,19 @@ namespace BabyEngine {
                
                 AssetDatabase.Refresh();
                 // 复制 GameConf.LUA_FRAMEWORK
-                var destPath = $"{Application.streamingAssetsPath}/{abName}";
                 Directory.CreateDirectory(Application.streamingAssetsPath);
-                
-                File.Copy(outputPath, destPath, true);
+                File.Copy(outputPath, $"{Application.streamingAssetsPath}/{abName}", true);
+                File.Copy(outputPath+ ".manifest", $"{Application.streamingAssetsPath}/{abName}.manifest", true);
                 AssetDatabase.Refresh();
 
-                var elapsedTime = DateTime.Now.Subtract(startTime);
+                
                 FileInfo fileInfo = new FileInfo(outputPath);
                 var version = $"{fileInfo.CreationTime.ToFileTimeUtc()}";
                 if (!Directory.Exists("Assets/Resources")) {
                     Directory.CreateDirectory("Assets/Resources");
                 }
                 File.WriteAllText("Assets/Resources/baby_version.txt", version);
+                var elapsedTime = DateTime.Now.Subtract(startTime);
                 Debug.Log($"copy {count} lua files, elapsed time:{elapsedTime} version:{version}");
                 
             } catch (Exception e) {
@@ -146,6 +145,66 @@ namespace BabyEngine {
                 File.Delete($"{dir.Remove(dir.Length - 1)}.meta");
             }
         }
+        #endregion
+
+        #region 打包资源
+        static readonly List<string> filetype = new List<string> { 
+            ".shader", ".renderTexture", ".jpg", ".png", ".mat",".tga",
+            ".anim", ".fbx", ".prefab", ".mp3", ".ogg", ".asset",
+            ".json", ".txt", ".wav", ".ttf", ".fontsettings",
+            ".controller", ".bytes"
+        };
+        //[MenuItem("Tools/Build/iOS Resource", false, 100)]
+        //public static void BuildiPhoneResource() {
+        //    BuildAssetResource(BuildTarget.iOS);
+        //}
+        public static void BuildAssetResource(BuildTarget target, string path) {
+            var startTime = DateTime.Now;
+            if (Application.isPlaying || EditorApplication.isCompiling) {
+                EditorUtility.DisplayDialog("提醒", "运行中或编译未完成", "确定");
+                return;
+            }
+            if (!Directory.Exists(Application.streamingAssetsPath)) {
+                Directory.CreateDirectory(Application.streamingAssetsPath);
+            }
+            path = Application.dataPath + "/" + path;
+            List<string> tempList = new List<string>();
+            maps.Clear();
+            // 遍历文件
+            string[] dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
+            foreach(string item in dirs) {
+                string[] files = Directory.GetFiles(item);
+                tempList.Clear();
+                foreach (string str in files) {
+                    string ext = Path.GetExtension(str);
+                    if (!filetype.Contains(ext)) {
+                        continue;
+                    }
+                    var tmp = "Assets" + str.Replace(Application.dataPath, "");
+                    tempList.Add(tmp);
+                }
+                files = tempList.ToArray();
+                if (files.Length == 0) {
+                    continue;
+                }
+                var temp = item.Substring(Application.dataPath.Length + 1).Replace("/", "-").Replace("\\", "-");
+                var dirName = temp + ".unity3d";
+                AssetBundleBuild build = new AssetBundleBuild();
+                build.assetBundleName = dirName;
+                build.assetNames = files;
+                maps.Add(build);
+            }
+            // 构建AB
+            if(!Directory.Exists(GameConf.AB_PATH)) {
+                Directory.CreateDirectory(GameConf.AB_PATH);
+            }
+            BuildPipeline.BuildAssetBundles(GameConf.AB_PATH, maps.ToArray(), BuildAssetBundleOptions.None, target);
+            AssetDatabase.Refresh();
+            var elapsedTime = DateTime.Now.Subtract(startTime);
+            Debug.Log($"build {maps.Count} AB, elapsed time:{elapsedTime}");
+        }
+        
+        static List<AssetBundleBuild> maps = new List<AssetBundleBuild>();
         #endregion
     }
 }

@@ -12,8 +12,8 @@ namespace BabyEngine {
         private LuaEnv lua = new LuaEnv();
         public string MainGameApp;
         public string CustomSearchPath;
-        public string StartupUrl;
-
+        
+        public StartupChecker checker;
         private void Awake() {
             // load pb
             lua.AddBuildin("pb", XLua.LuaDLL.Lua.LoadPB);
@@ -24,56 +24,21 @@ namespace BabyEngine {
         }
 
         private void Start() {
-            if (string.IsNullOrEmpty(StartupUrl)) {
+            if (checker == null) {
                 onLuaStart(() => {
                     InitLua();
                     Invoke("RunLua", 0);
                 });
             } else {
-                StartCoroutine(CheckStartup(() => {
-                    InitLua();
-                    Invoke("RunLua", 0);
-
-                },(err) => {
+                checker.CheckVersioning(() => {
+                    //InitLua();
+                    //Invoke("RunLua", 0);
+                }, (err) => {
                     Debug.LogError($"检查失败{err}");
-                 }));
+                });
             }
         }
 
-        private IEnumerator CheckStartup(Action onOk, Action<string> onErr) {
-            yield return null;
-            //UnityWebRequest request = UnityWebRequest.Get(StartupUrl);
-            //yield return request.SendWebRequest();
-            //if (request.isNetworkError || request.isHttpError) {
-            //    Debug.Log(StartupUrl);
-            //    okErr(request.error);
-            //    yield break;
-            //}
-            //string body = request.downloadHandler.text;
-            //Debug.Log(body);
-            //// TODO something
-            //onOk();
-            
-            var co = CacheableDownloadHandler.GetBytes(StartupUrl, (statusCode, header, body) => {
-                if (statusCode == 200) { // use new data
-
-                }
-                switch (statusCode) {
-                    case 200: // use new data
-                        Debug.Log(body.ToUTF8String());
-                        onOk();
-                        break;
-                    case 304: // use cache daeta
-                        Debug.Log(body.ToUTF8String());
-                        onOk();
-                        break;
-                    default:  // not respect this
-                        onErr($"http ${statusCode}");
-                        break;
-                }
-            });
-            StartCoroutine(co);
-        }
 
         void onLuaStart(Action cb) {
             if (Installer.IsInstall()) {
