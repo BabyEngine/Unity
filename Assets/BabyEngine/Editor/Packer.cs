@@ -64,7 +64,8 @@ namespace BabyEngine {
         #endregion
 
         #region 打包lua
-        public static void makeLuaAssetBundle(string subDir, string outputPath) {
+        public static string makeLuaAssetBundle(string subDir, string outputPath) {
+            string outputFilepath = string.Empty;
             try {
                 var startTime = DateTime.Now;
                 string luaDir = $"{Application.dataPath}/{subDir}";
@@ -120,8 +121,8 @@ namespace BabyEngine {
                 File.Copy(outputPath, $"{Application.streamingAssetsPath}/{extSubDir}/{abName}", true);
                 File.Copy(outputPath+ ".manifest", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}.manifest", true);
                 AssetDatabase.Refresh();
+                outputFilepath = $"{Application.streamingAssetsPath}/{extSubDir}/{abName}";
 
-                
                 FileInfo fileInfo = new FileInfo(outputPath);
                 var version = $"{fileInfo.CreationTime.ToFileTimeUtc()}";
                 if (!Directory.Exists("Assets/Resources")) {
@@ -140,6 +141,7 @@ namespace BabyEngine {
                 DeleteDir(GameConf.AB_PATH);
                 AssetDatabase.Refresh();
             }
+            return outputFilepath;
         }
         static void AddABFile(string filepath) {
             
