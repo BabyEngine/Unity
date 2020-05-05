@@ -3,12 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
 namespace BabyEngine {
     public class Packer {
-
+        
         private static List<String> DirSearch(string sDir) {
             List<String> files = new List<String>();
             try {
@@ -57,7 +59,7 @@ namespace BabyEngine {
         #region 复制lua
         [MenuItem("Tools/Build/Copy Lua Framework")]
         public static void BuildLua() {
-            makeLuaAssetBundle(GameConf.LUA_BASE_PATH, $"Assets/Abs/{GameConf.LUA_FRAMEWORK}");
+            makeLuaAssetBundle(GameConf.LUA_BASE_PATH, $"{GameConf.AB_PATH}{GameConf.LUA_FRAMEWORK}");
         }
         #endregion
 
@@ -107,15 +109,16 @@ namespace BabyEngine {
                 build.assetNames = luaPaths.ToArray();
 
                 buildMap.Add(build);
-
+                // ext sub dirs
+                var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
                 Directory.CreateDirectory(abPath);
-                BuildPipeline.BuildAssetBundles(GameConf.AB_PATH, buildMap.ToArray(), BuildAssetBundleOptions.None, BuildTarget.Android);
+                BuildPipeline.BuildAssetBundles(GameConf.AB_PATH + extSubDir, buildMap.ToArray(), BuildAssetBundleOptions.None, BuildTarget.Android);
                
                 AssetDatabase.Refresh();
                 // 复制 GameConf.LUA_FRAMEWORK
-                Directory.CreateDirectory(Application.streamingAssetsPath);
-                File.Copy(outputPath, $"{Application.streamingAssetsPath}/{abName}", true);
-                File.Copy(outputPath+ ".manifest", $"{Application.streamingAssetsPath}/{abName}.manifest", true);
+                Directory.CreateDirectory(Application.streamingAssetsPath+$"/{extSubDir}");
+                File.Copy(outputPath, $"{Application.streamingAssetsPath}/{extSubDir}/{abName}", true);
+                File.Copy(outputPath+ ".manifest", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}.manifest", true);
                 AssetDatabase.Refresh();
 
                 
@@ -125,9 +128,10 @@ namespace BabyEngine {
                     Directory.CreateDirectory("Assets/Resources");
                 }
                 File.WriteAllText("Assets/Resources/baby_version.txt", version);
+                AddABFile($"{Application.streamingAssetsPath}/{extSubDir}/{abName}");
+
                 var elapsedTime = DateTime.Now.Subtract(startTime);
                 Debug.Log($"copy {count} lua files, elapsed time:{elapsedTime} version:{version}");
-                
             } catch (Exception e) {
                 Debug.LogError(e);
             } finally {
@@ -136,6 +140,19 @@ namespace BabyEngine {
                 DeleteDir(GameConf.AB_PATH);
                 AssetDatabase.Refresh();
             }
+        }
+        static void AddABFile(string filepath) {
+            
+            var statusFile = $"{Application.streamingAssetsPath}/build_status";
+            // load
+            List<string> lines = new List<string>();
+            if (File.Exists(statusFile)) {
+                lines.AddRange(File.ReadAllLines(statusFile));
+            }
+            // add
+            lines.Add(filepath);
+            // write
+            File.WriteAllLines(statusFile, lines.Distinct());
         }
         private static void DeleteDir(string dir) {
             if (Directory.Exists(dir)) {
@@ -154,25 +171,24 @@ namespace BabyEngine {
             ".json", ".txt", ".wav", ".ttf", ".fontsettings",
             ".controller", ".bytes"
         };
-        //[MenuItem("Tools/Build/iOS Resource", false, 100)]
-        //public static void BuildiPhoneResource() {
-        //    BuildAssetResource(BuildTarget.iOS);
-        //}
-        public static void BuildAssetResource(BuildTarget target, string path) {
+        public static string[] BuildAssetResource(BuildTarget target, string path, string outputPath) {
+            List<string> allAssetBundleFilename = new List<string>();
             var startTime = DateTime.Now;
+            List<AssetBundleBuild> maps = new List<AssetBundleBuild>();
             if (Application.isPlaying || EditorApplication.isCompiling) {
                 EditorUtility.DisplayDialog("提醒", "运行中或编译未完成", "确定");
-                return;
+                return allAssetBundleFilename.ToArray();
             }
             if (!Directory.Exists(Application.streamingAssetsPath)) {
                 Directory.CreateDirectory(Application.streamingAssetsPath);
             }
             path = Application.dataPath + "/" + path;
             List<string> tempList = new List<string>();
-            maps.Clear();
             // 遍历文件
-            string[] dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
-            foreach(string item in dirs) {
+            string abPath = Path.GetDirectoryName(outputPath);
+            var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
+            List<string> abNames = new List<string>();
+            Action<string> handleDir = (string item) => {
                 string[] files = Directory.GetFiles(item);
                 tempList.Clear();
                 foreach (string str in files) {
@@ -185,26 +201,65 @@ namespace BabyEngine {
                 }
                 files = tempList.ToArray();
                 if (files.Length == 0) {
-                    continue;
+                    return;
                 }
-                var temp = item.Substring(Application.dataPath.Length + 1).Replace("/", "-").Replace("\\", "-");
-                var dirName = temp + ".unity3d";
+                string temp = item.Substring(Application.dataPath.Length + 1);//.Replace("/", "-").Replace("\\", "-");
+                if (item == path) {
+                    temp = temp.Substring(0, temp.Length - 1);
+                }
+                var abName = extSubDir + "/" + temp + ".unity3d";
+
+                var ttt = Path.GetDirectoryName($"{GameConf.AB_PATH}{abName}");
+                Debug.LogWarning(ttt);
+
                 AssetBundleBuild build = new AssetBundleBuild();
-                build.assetBundleName = dirName;
+                build.assetBundleName = abName;
                 build.assetNames = files;
                 maps.Add(build);
+                abNames.Add(abName);
+            };
+            
+            string[] dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
+            handleDir(path);
+            foreach (string item in dirs) {
+                handleDir(item);
             }
             // 构建AB
             if(!Directory.Exists(GameConf.AB_PATH)) {
                 Directory.CreateDirectory(GameConf.AB_PATH);
             }
             BuildPipeline.BuildAssetBundles(GameConf.AB_PATH, maps.ToArray(), BuildAssetBundleOptions.None, target);
+            
+            // copy to StreamingAssets
+            Directory.CreateDirectory(Application.streamingAssetsPath + $"/{extSubDir}");
+            foreach (var abName in abNames) {
+                Debug.Log(abName);
+                //File.Copy(outputPath, $"{Application.streamingAssetsPath}/{extSubDir}/{abName}", true);
+                //File.Copy(outputPath + ".manifest", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}.manifest", true);
+            }
+
             AssetDatabase.Refresh();
             var elapsedTime = DateTime.Now.Subtract(startTime);
             Debug.Log($"build {maps.Count} AB, elapsed time:{elapsedTime}");
+
+            return allAssetBundleFilename.ToArray();
         }
         
-        static List<AssetBundleBuild> maps = new List<AssetBundleBuild>();
+        
+        #endregion
+
+        #region utils functions
+        static string CalculateMD5(string filename) {
+            using (var md5 = MD5.Create()) {
+                using (var stream = File.OpenRead(filename)) {
+                    var hash = md5.ComputeHash(stream);
+                    return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                }
+            }
+        }
+        static long FileSize(string filename) {
+            return new System.IO.FileInfo(filename).Length;
+        }
         #endregion
     }
 }

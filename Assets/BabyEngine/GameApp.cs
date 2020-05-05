@@ -13,7 +13,6 @@ namespace BabyEngine {
         public string MainGameApp;
         public string CustomSearchPath;
         
-        public StartupChecker checker;
         private void Awake() {
             // load pb
             lua.AddBuildin("pb", XLua.LuaDLL.Lua.LoadPB);
@@ -24,19 +23,27 @@ namespace BabyEngine {
         }
 
         private void Start() {
-            if (checker == null) {
-                onLuaStart(() => {
-                    InitLua();
-                    Invoke("RunLua", 0);
-                });
-            } else {
-                checker.CheckVersioning(() => {
-                    //InitLua();
-                    //Invoke("RunLua", 0);
-                }, (err) => {
-                    Debug.LogError($"检查失败{err}");
-                });
-            }
+            PerfomLuaStart();
+            //if (checker == null) {
+            //    onLuaStart(() => {
+            //        InitLua();
+            //        Invoke("RunLua", 0);
+            //    });
+            //} else {
+            //    checker.CheckVersioning(() => {
+            //        //InitLua();
+            //        //Invoke("RunLua", 0);
+            //    }, (err) => {
+            //        Debug.LogError($"检查失败{err}");
+            //    });
+            //}
+        }
+
+        public void PerfomLuaStart() {
+            onLuaStart(() => {
+                InitLua();
+                Invoke("RunLua", 0);
+            });
         }
 
 

@@ -6,7 +6,7 @@ using XLua;
 
 namespace BabyEngine {
     public abstract class Loader {
-        static Loader currentLoader;
+        static Loader currentLoader = null;
         public static LuaEnv.CustomLoader Create() {
 #if UNITY_EDITOR
             if (currentLoader == null) {

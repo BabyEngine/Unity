@@ -17,7 +17,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Game/Valkyrja/scenes/main.unity
     guid: 301dffae212741c4691185034b504bb1
-  - enabled: 1
-    path: Assets/Startup.unity
+  - enabled: 0
+    path: Assets/Game/AllInOne/Startup.unity
     guid: 4960b319e35b1c34888b84bbf1988687
+  - enabled: 1
+    path: Assets/Game/TopdownShoot/main.unity
+    guid: 548e32c2d75102c4ba300455be54761f
   m_configObjects: {}
