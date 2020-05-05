@@ -173,75 +173,83 @@ namespace BabyEngine {
         };
         public static string[] BuildAssetResource(BuildTarget target, string path, string outputPath) {
             List<string> allAssetBundleFilename = new List<string>();
-            var startTime = DateTime.Now;
-            List<AssetBundleBuild> maps = new List<AssetBundleBuild>();
-            if (Application.isPlaying || EditorApplication.isCompiling) {
-                EditorUtility.DisplayDialog("提醒", "运行中或编译未完成", "确定");
-                return allAssetBundleFilename.ToArray();
-            }
-            if (!Directory.Exists(Application.streamingAssetsPath)) {
-                Directory.CreateDirectory(Application.streamingAssetsPath);
-            }
-            path = Application.dataPath + "/" + path;
-            List<string> tempList = new List<string>();
-            // 遍历文件
-            string abPath = Path.GetDirectoryName(outputPath);
-            var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
-            List<string> abNames = new List<string>();
-            Action<string> handleDir = (string item) => {
-                string[] files = Directory.GetFiles(item);
-                tempList.Clear();
-                foreach (string str in files) {
-                    string ext = Path.GetExtension(str);
-                    if (!filetype.Contains(ext)) {
-                        continue;
+            try {
+                var startTime = DateTime.Now;
+                List<AssetBundleBuild> maps = new List<AssetBundleBuild>();
+                if (Application.isPlaying || EditorApplication.isCompiling) {
+                    EditorUtility.DisplayDialog("提醒", "运行中或编译未完成", "确定");
+                    return allAssetBundleFilename.ToArray();
+                }
+                if (!Directory.Exists(Application.streamingAssetsPath)) {
+                    Directory.CreateDirectory(Application.streamingAssetsPath);
+                }
+                path = Application.dataPath + "/" + path;
+                List<string> tempList = new List<string>();
+                // 遍历文件
+                string abPath = Path.GetDirectoryName(outputPath);
+                var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
+                List<string> abNames = new List<string>();
+                Action<string> handleDir = (string item) => {
+                    string[] files = Directory.GetFiles(item);
+                    tempList.Clear();
+                    foreach (string str in files) {
+                        string ext = Path.GetExtension(str);
+                        if (!filetype.Contains(ext)) {
+                            continue;
+                        }
+                        var tmp = "Assets" + str.Replace(Application.dataPath, "");
+                        tempList.Add(tmp);
                     }
-                    var tmp = "Assets" + str.Replace(Application.dataPath, "");
-                    tempList.Add(tmp);
+                    files = tempList.ToArray();
+                    if (files.Length == 0) {
+                        return;
+                    }
+                    string temp = item.Substring(Application.dataPath.Length + 1);//.Replace("/", "-").Replace("\\", "-");
+                    if (item == path) {
+                        temp = temp.Substring(0, temp.Length - 1);
+                    }
+                    var abName = extSubDir + "/" + temp + ".unity3d";
+                    AssetBundleBuild build = new AssetBundleBuild();
+                    build.assetBundleName = abName;
+                    build.assetNames = files;
+                    maps.Add(build);
+                    abNames.Add(abName);
+                };
+
+                string[] dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
+                handleDir(path);
+                foreach (string item in dirs) {
+                    handleDir(item);
                 }
-                files = tempList.ToArray();
-                if (files.Length == 0) {
-                    return;
+                // 构建AB
+                if (!Directory.Exists(GameConf.AB_PATH)) {
+                    Directory.CreateDirectory(GameConf.AB_PATH);
                 }
-                string temp = item.Substring(Application.dataPath.Length + 1);//.Replace("/", "-").Replace("\\", "-");
-                if (item == path) {
-                    temp = temp.Substring(0, temp.Length - 1);
+                BuildPipeline.BuildAssetBundles(GameConf.AB_PATH, maps.ToArray(), BuildAssetBundleOptions.None, target);
+
+                // copy to StreamingAssets
+                Directory.CreateDirectory(Application.streamingAssetsPath + $"/{extSubDir}");
+                foreach (var abName in abNames) {
+                    var filepath = $"{Application.streamingAssetsPath}/{abName}";
+                    //Debug.Log(filepath);
+                    allAssetBundleFilename.Add(filepath);
                 }
-                var abName = extSubDir + "/" + temp + ".unity3d";
+                if (!Directory.Exists($"{Application.streamingAssetsPath}/{extSubDir}")) {
+                    Directory.CreateDirectory($"{Application.streamingAssetsPath}/{extSubDir}");
+                }
+                Utility.CopyDirectory(outputPath, $"{Application.streamingAssetsPath}/{extSubDir}");
 
-                var ttt = Path.GetDirectoryName($"{GameConf.AB_PATH}{abName}");
-                Debug.LogWarning(ttt);
-
-                AssetBundleBuild build = new AssetBundleBuild();
-                build.assetBundleName = abName;
-                build.assetNames = files;
-                maps.Add(build);
-                abNames.Add(abName);
-            };
-            
-            string[] dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
-            handleDir(path);
-            foreach (string item in dirs) {
-                handleDir(item);
+                AssetDatabase.Refresh();
+                var elapsedTime = DateTime.Now.Subtract(startTime);
+                Debug.Log($"build {maps.Count} AB, elapsed time:{elapsedTime}");
+            }catch(Exception e) {
+                Debug.LogError(e);
+            } finally {
+                // 清理战场
+                DeleteDir($"Assets/{GameConf.LUA_TEMP_PATH}");
+                DeleteDir(GameConf.AB_PATH);
+                AssetDatabase.Refresh();
             }
-            // 构建AB
-            if(!Directory.Exists(GameConf.AB_PATH)) {
-                Directory.CreateDirectory(GameConf.AB_PATH);
-            }
-            BuildPipeline.BuildAssetBundles(GameConf.AB_PATH, maps.ToArray(), BuildAssetBundleOptions.None, target);
-            
-            // copy to StreamingAssets
-            Directory.CreateDirectory(Application.streamingAssetsPath + $"/{extSubDir}");
-            foreach (var abName in abNames) {
-                Debug.Log(abName);
-                //File.Copy(outputPath, $"{Application.streamingAssetsPath}/{extSubDir}/{abName}", true);
-                //File.Copy(outputPath + ".manifest", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}.manifest", true);
-            }
-
-            AssetDatabase.Refresh();
-            var elapsedTime = DateTime.Now.Subtract(startTime);
-            Debug.Log($"build {maps.Count} AB, elapsed time:{elapsedTime}");
-
             return allAssetBundleFilename.ToArray();
         }
         
