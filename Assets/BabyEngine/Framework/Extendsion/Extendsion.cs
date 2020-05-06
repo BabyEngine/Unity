@@ -14,5 +14,32 @@ namespace BabyEngine {
         public static byte[] GetUTF8Bytes(this string str) {
             return Encoding.UTF8.GetBytes(str);
         }
+
+        public static string ToByteSize(this int val) {
+            long vv = val;
+            return vv.ToByteSize();
+        }
+
+        public static string ToByteSize(this long val) {
+            string unit = "";
+            float v = val;
+            if (val < 1024) {
+                unit = "B";
+            } else if (val >= (1 << 10)) { // K
+                unit = "K";
+                v = v / (1 << 10);
+            } else if (val >= (1 << 20)) { // M
+                unit = "M";
+                v = v / (1 << 20);
+            } else if (val >= (1 << 30)) { // G
+                unit = "G";
+                v = v / (1 << 30);
+            } else if (val >= (1 << 40)) { // T
+                unit = "T";
+                v = v / (1 << 40);
+            }
+
+            return string.Format("{0:N2} {1}", v, unit);
+        }
     }
 }

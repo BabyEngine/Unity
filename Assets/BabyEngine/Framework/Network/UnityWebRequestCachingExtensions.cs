@@ -13,14 +13,14 @@ namespace BabyEngine {
     /// UnityWebRequest 扩展
     /// </summary>
     public static class UnityWebRequestCachingExtensions {
-        public static DownloadHandler SetCacheable(this UnityWebRequest www) {
-            CacheableDownloadHandler handler = new CacheableDownloadHandler(www, new byte[1024]);
-            var etag = ICacheableDownloadHandler.GetCacheEtag(www.url);
+        public static CacheableDownloadHandler SetCacheable(this UnityWebRequest www, bool saveAsPersistent) {
+            CacheableDownloadHandler handler = new CacheableDownloadHandler(www, new byte[16], saveAsPersistent);
+            var etag = handler.GetCacheEtag();
             if (etag != null) {
                 www.SetRequestHeader("If-None-Match", etag);
             }
             www.downloadHandler = handler;
-            return www.downloadHandler;
+            return handler;
         }
 
         public static void LoadImage(this Image image, string url) {
@@ -30,7 +30,7 @@ namespace BabyEngine {
                 return; 
             }
 
-            mo.StartCoroutine(CacheableDownloadHandler.GetTexture2D(url, (code, header, tex) => {
+            mo.StartCoroutine(CacheableDownloadHandler.GetTexture2D(url, false, (code, header, tex) => {
                 if (code == 200 || code == 304) {
                     image.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.one / 2.0f);
                 } else {
@@ -63,7 +63,7 @@ namespace BabyEngine {
         /// <summary>
         /// 缓存地址
         /// </summary>
-        static string sWebCachePath;
+        string sWebCachePath;
         /// <summary>
         /// UnityRequest
         /// </summary>
@@ -80,6 +80,8 @@ namespace BabyEngine {
         /// 是否加载完成
         /// </summary>
         public new bool isDone { get; private set; } = false;
+        protected bool saveAsPersistent = false;
+        protected string url = string.Empty;
         /// <summary>
         /// SHA1
         /// </summary>
@@ -101,8 +103,8 @@ namespace BabyEngine {
         /// </summary>
         /// <param name="url"></param>
         /// <returns></returns>
-        public static string GetCacheEtag(string url) {
-            var path = GetCachePath(url);
+        public string GetCacheEtag() {
+            var path = GetCachePath();
             var infoPath = path + kEtagSufix;
             var dataPath = path + kDataSufix;
             return (File.Exists(infoPath)) && File.Exists(dataPath)
@@ -114,10 +116,16 @@ namespace BabyEngine {
         /// </summary>
         /// <param name="url"></param>
         /// <returns></returns>
-        public static string GetCachePath(string url) {
-            if (string.IsNullOrEmpty(sWebCachePath)) {
-                sWebCachePath = Application.temporaryCachePath + "/WebCache/";
+        public string GetCachePath() {
+            string locallDir = Application.temporaryCachePath;
+            if (saveAsPersistent == true) {
+                locallDir = Application.persistentDataPath;
             }
+            
+            if (string.IsNullOrEmpty(sWebCachePath)) {
+                sWebCachePath = locallDir + "/WebCache/";
+            }
+
             if (!Directory.Exists(sWebCachePath)) {
                 Directory.CreateDirectory(sWebCachePath);
             }
@@ -131,8 +139,8 @@ namespace BabyEngine {
         /// </summary>
         /// <param name="url"></param>
         /// <returns></returns>
-        public static byte[] LoadCache(string url) {
-            return File.ReadAllBytes(GetCachePath(url) + kDataSufix);
+        public byte[] LoadCache(string url) {
+            return File.ReadAllBytes(GetCachePath() + kDataSufix);
         }
         /// <summary>
         /// 保存cache
@@ -140,14 +148,14 @@ namespace BabyEngine {
         /// <param name="url"></param>
         /// <param name="etag"></param>
         /// <param name="datas"></param>
-        public static void SaveCache(string url, string etag, byte[] datas) {
-            var path = GetCachePath(url);
+        public void SaveCache(string etag, byte[] datas) {
+            var path = GetCachePath();
             File.WriteAllText(path + kEtagSufix, etag);
             File.WriteAllBytes(path + kDataSufix, datas);
         }
 
-        public static void RemoveCache(string url) {
-            var path = GetCachePath(url);
+        public void RemoveCache() {
+            var path = GetCachePath();
             if (File.Exists(path + kEtagSufix)) {
                 File.Delete(path + kEtagSufix);
             }
@@ -166,12 +174,12 @@ namespace BabyEngine {
                         break;
                     case 200: // 数据有变化, 用服务器下发数据覆盖本地缓存
                         mBuffer = mStream.GetBuffer();
-                        SaveCache(url, mWebRequest.GetResponseHeader("Etag"), mBuffer);
+                        SaveCache(mWebRequest.GetResponseHeader("Etag"), mBuffer);
                         break;
                     default:
                         mBuffer = mStream.GetBuffer();
                         // deleate cache
-                        RemoveCache(url);
+                        RemoveCache();
                         break;
                 }
             }
@@ -216,7 +224,9 @@ namespace BabyEngine {
     /// 可缓存 Bytes DownloadHandler
     /// </summary>
     public class CacheableDownloadHandler : ICacheableDownloadHandler {
-        public CacheableDownloadHandler(UnityWebRequest www, byte[] preallocBuffer) : base(www, preallocBuffer) {
+        public CacheableDownloadHandler(UnityWebRequest www, byte[] preallocBuffer, bool saveAsPersistent) : base(www, preallocBuffer) {
+            this.url = www.url;
+            this.saveAsPersistent = saveAsPersistent;
         }
         #region APIs
         /// <summary>
@@ -225,9 +235,9 @@ namespace BabyEngine {
         /// <param name="url"></param>
         /// <param name="cb"></param>
         /// <returns></returns>
-        public static IEnumerator GetTexture2D(string url, Action<int, Dictionary<string, string>, Texture2D> cb) {
+        public static IEnumerator GetTexture2D(string url, bool saveAsPersistent, Action<int, Dictionary<string, string>, Texture2D> cb) {
             UnityWebRequest www = UnityWebRequestTexture.GetTexture(url);
-            www.SetCacheable();
+            www.SetCacheable(saveAsPersistent);
             yield return www.SendWebRequest();
 
             while (!www.isDone)
@@ -250,8 +260,9 @@ namespace BabyEngine {
             cb((int)www.responseCode, www.GetResponseHeaders(), tex);
         }
 
-        public static IEnumerator GetBytes(string url, Action<int, Dictionary<string, string>, byte[]> cb) {
+        public static IEnumerator GetBytes(string url, bool saveAsPersistent, Action<int, Dictionary<string, string>, byte[]> cb) {
             UnityWebRequest www = UnityWebRequest.Get(url);
+            www.SetCacheable(saveAsPersistent);
             yield return www.SendWebRequest();
             while (!www.isDone)
                 yield return true;
@@ -264,6 +275,29 @@ namespace BabyEngine {
             cb((int)www.responseCode, www.GetResponseHeaders(), www.downloadHandler.data);
         }
 
+        public static IEnumerator GetAssetBundle(string url, bool saveAsPersistent, Action<int, Dictionary<string, string>, AssetBundle, string> cb) {
+            UnityWebRequest www = UnityWebRequestAssetBundle.GetAssetBundle(url);
+            var handler = www.SetCacheable(saveAsPersistent);
+            yield return www.SendWebRequest();
+            while (!www.isDone)
+                yield return true;
+
+            if (www.isNetworkError) {
+                Debug.Log(": Error: " + www.error);
+                cb((int)www.responseCode, www.GetResponseHeaders(), null, string.Empty);
+                yield break;
+            }
+            AssetBundle ab = null;
+            try {
+                ab = AssetBundle.LoadFromMemory(www.downloadHandler.data);
+            } catch(Exception e) {
+                Debug.LogError(e);
+                Debug.Log($"{www.responseCode} {url} {www.downloadHandler.data}");
+            }
+            
+            cb((int)www.responseCode, www.GetResponseHeaders(), ab, handler.GetCachePath());
+        }
+
         #endregion
-    }
+        }
 }

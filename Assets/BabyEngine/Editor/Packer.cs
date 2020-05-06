@@ -129,7 +129,7 @@ namespace BabyEngine {
                     Directory.CreateDirectory("Assets/Resources");
                 }
                 File.WriteAllText("Assets/Resources/baby_version.txt", version);
-                AddABFile($"{Application.streamingAssetsPath}/{extSubDir}/{abName}");
+                AddABFile("lua", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}");
 
                 var elapsedTime = DateTime.Now.Subtract(startTime);
                 Debug.Log($"copy {count} lua files, elapsed time:{elapsedTime} version:{version}");
@@ -143,8 +143,7 @@ namespace BabyEngine {
             }
             return outputFilepath;
         }
-        static void AddABFile(string filepath) {
-            
+        static void AddABFile(string type, string filepath) {
             var statusFile = $"{Application.streamingAssetsPath}/build_status";
             // load
             List<string> lines = new List<string>();
@@ -152,7 +151,7 @@ namespace BabyEngine {
                 lines.AddRange(File.ReadAllLines(statusFile));
             }
             // add
-            lines.Add(filepath);
+            lines.Add($"{type}|{filepath}");
             // write
             File.WriteAllLines(statusFile, lines.Distinct());
         }
@@ -235,6 +234,7 @@ namespace BabyEngine {
                     var filepath = $"{Application.streamingAssetsPath}/{abName}";
                     //Debug.Log(filepath);
                     allAssetBundleFilename.Add(filepath);
+                    AddABFile("res", filepath);
                 }
                 if (!Directory.Exists($"{Application.streamingAssetsPath}/{extSubDir}")) {
                     Directory.CreateDirectory($"{Application.streamingAssetsPath}/{extSubDir}");
@@ -254,10 +254,35 @@ namespace BabyEngine {
             }
             return allAssetBundleFilename.ToArray();
         }
-        
-        
-        #endregion
 
+
+        #endregion
+        #region 生成Hash文件
+        public static void BuildHashFile() {
+            var statusFile = $"{Application.streamingAssetsPath}/build_status";
+            var outputFile = $"{Application.streamingAssetsPath}/file.txt";
+            List<string> lines = new List<string>();
+            if (File.Exists(statusFile)) {
+                lines.AddRange(File.ReadAllLines(statusFile));
+            }
+            StringWriter sw = new StringWriter();
+            foreach(var line in lines) {
+                var tokens = line.Split('|');
+                if (tokens == null || tokens.Length != 2) {
+                    continue;
+                }
+                var type = tokens[0];
+                var filepath = tokens[1];
+                var hash = CalculateMD5(filepath);
+                var size = FileSize(filepath);
+                var path = filepath.Replace(Application.streamingAssetsPath + "/", "");
+                var info = $"{type}|{hash}|{size}|{path.ToLower()}";
+                Debug.Log(info);
+                sw.WriteLine(info);
+            }
+            File.WriteAllText(outputFile, sw.ToString());
+        }
+        #endregion
         #region utils functions
         static string CalculateMD5(string filename) {
             using (var md5 = MD5.Create()) {
