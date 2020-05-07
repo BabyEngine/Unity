@@ -265,6 +265,16 @@ namespace BabyEngine {
 
         #endregion
         #region 生成Hash文件
+        public static void ResetHashFile() {
+            var statusFile = $"{Application.streamingAssetsPath}/build_status.txt";
+            var outputFile = $"{Application.streamingAssetsPath}/update.txt";
+            if (File.Exists(statusFile)) {
+                File.Delete(statusFile);
+            }
+            if (File.Exists(outputFile)) {
+                File.Delete(outputFile);
+            }
+        }
         public static void BuildHashFile() {
             var statusFile = $"{Application.streamingAssetsPath}/build_status.txt";
             var outputFile = $"{Application.streamingAssetsPath}/update.txt";

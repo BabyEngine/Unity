@@ -27,14 +27,6 @@ namespace BabyEngine {
         }
 
         public void PerfomLuaStart() {
-            //onLuaStart(() => {
-            //    if (isStart)
-            //        return;
-            //    isStart = true;
-            //    InitLua();
-            //    Invoke("RunLua", 0);
-            //});
-
             if (isStart)
                 return;
             isStart = true;

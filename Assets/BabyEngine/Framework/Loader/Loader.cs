@@ -20,6 +20,10 @@ namespace BabyEngine {
             if (currentLoader == null) {
                 currentLoader = new WebGLLoader();
             }
+#elif UNITY_STANDALONE_WIN
+            if (currentLoader == null) {
+                currentLoader = new WindowsLoader();
+            }
 #endif
             return currentLoader.Load;
         }
