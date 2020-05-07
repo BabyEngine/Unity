@@ -59,12 +59,12 @@ namespace BabyEngine {
         #region 复制lua
         [MenuItem("Tools/Build/Copy Lua Framework")]
         public static void BuildLua() {
-            makeLuaAssetBundle(GameConf.LUA_BASE_PATH, $"{GameConf.AB_PATH}{GameConf.LUA_FRAMEWORK}");
+            makeLuaAssetBundle(GameConf.LUA_BASE_PATH, $"{GameConf.AB_PATH}{GameConf.LUA_FRAMEWORK}", true);
         }
         #endregion
 
         #region 打包lua
-        public static string makeLuaAssetBundle(string subDir, string outputPath) {
+        public static string makeLuaAssetBundle(string subDir, string outputPath, bool moveToRoot = false) {
             string outputFilepath = string.Empty;
             try {
                 var startTime = DateTime.Now;
@@ -102,8 +102,9 @@ namespace BabyEngine {
                 }
                 AssetDatabase.Refresh();
                 //Create the array of bundle build details.
-                string abPath = Path.GetDirectoryName(outputPath);
-                string abName = Path.GetFileName(outputPath);
+                string abPath = Path.GetDirectoryName(outputPath).Replace("\\", "/");
+                string abName = Path.GetFileName(outputPath).Replace("\\", "/");
+               
                 List<AssetBundleBuild> buildMap = new List<AssetBundleBuild>();
                 AssetBundleBuild build = new AssetBundleBuild();
                 build.assetBundleName = abName;
@@ -111,12 +112,17 @@ namespace BabyEngine {
 
                 buildMap.Add(build);
                 // ext sub dirs
-                var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
+                var extSubDir = abPath.Replace(GameConf.AB_PATH, "");
+                if(extSubDir == abPath) {
+                    extSubDir = string.Empty;
+                }
                 Directory.CreateDirectory(abPath);
-                BuildPipeline.BuildAssetBundles(GameConf.AB_PATH + extSubDir, buildMap.ToArray(), BuildAssetBundleOptions.None, BuildTarget.Android);
+
+                BuildPipeline.BuildAssetBundles(abPath, buildMap.ToArray(), BuildAssetBundleOptions.None, BuildTarget.Android);
                
                 AssetDatabase.Refresh();
                 // 复制 GameConf.LUA_FRAMEWORK
+                
                 Directory.CreateDirectory(Application.streamingAssetsPath+$"/{extSubDir}");
                 File.Copy(outputPath, $"{Application.streamingAssetsPath}/{extSubDir}/{abName}", true);
                 File.Copy(outputPath+ ".manifest", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}.manifest", true);
@@ -138,13 +144,14 @@ namespace BabyEngine {
             } finally {
                 // 清理战场
                 DeleteDir($"Assets/{GameConf.LUA_TEMP_PATH}");
-                DeleteDir(GameConf.AB_PATH);
+                //DeleteDir(GameConf.AB_PATH);
                 AssetDatabase.Refresh();
             }
             return outputFilepath;
         }
         static void AddABFile(string type, string filepath) {
-            var statusFile = $"{Application.streamingAssetsPath}/build_status";
+            filepath = filepath.Replace("//", "/");
+            var statusFile = $"{Application.streamingAssetsPath}/build_status.txt";
             // load
             List<string> lines = new List<string>();
             if (File.Exists(statusFile)) {
@@ -259,8 +266,8 @@ namespace BabyEngine {
         #endregion
         #region 生成Hash文件
         public static void BuildHashFile() {
-            var statusFile = $"{Application.streamingAssetsPath}/build_status";
-            var outputFile = $"{Application.streamingAssetsPath}/file.txt";
+            var statusFile = $"{Application.streamingAssetsPath}/build_status.txt";
+            var outputFile = $"{Application.streamingAssetsPath}/update.txt";
             List<string> lines = new List<string>();
             if (File.Exists(statusFile)) {
                 lines.AddRange(File.ReadAllLines(statusFile));

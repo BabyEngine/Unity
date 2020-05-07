@@ -6,6 +6,16 @@ using UnityEngine;
 
 namespace BabyEngine {
     public static class Extendsion {
+        public static string ToDefaultString(this byte[] bytes) {
+            if (bytes == null) { return null; }
+            return Encoding.Default.GetString(bytes);
+        }
+
+        public static string GetDefaultBytes(this byte[] bytes) {
+            if (bytes == null) { return null; }
+            return Encoding.Default.GetString(bytes);
+        }
+
         public static string ToUTF8String(this byte[] bytes) {
             if (bytes == null) { return null; }
             return Encoding.UTF8.GetString(bytes);

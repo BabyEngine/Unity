@@ -21,26 +21,16 @@ namespace BabyEngine {
             Screen.fullScreen = true;
             Screen.SetResolution(Display.main.systemWidth, Display.main.systemHeight, true, 60);
         }
-
+        bool isStart = false;
         private void Start() {
             PerfomLuaStart();
-            //if (checker == null) {
-            //    onLuaStart(() => {
-            //        InitLua();
-            //        Invoke("RunLua", 0);
-            //    });
-            //} else {
-            //    checker.CheckVersioning(() => {
-            //        //InitLua();
-            //        //Invoke("RunLua", 0);
-            //    }, (err) => {
-            //        Debug.LogError($"检查失败{err}");
-            //    });
-            //}
         }
 
         public void PerfomLuaStart() {
             onLuaStart(() => {
+                if (isStart)
+                    return;
+                isStart = true;
                 InitLua();
                 Invoke("RunLua", 0);
             });

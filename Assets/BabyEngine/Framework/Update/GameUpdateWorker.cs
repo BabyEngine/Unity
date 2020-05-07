@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,49 +10,29 @@ namespace BabyEngine {
     /// 游戏更新检查
     /// </summary>
     public class GameUpdateWorker : MonoBehaviour {
-        [SerializeField] private GameApp app = null;
-        [SerializeField] private string baseURL  = String.Empty;
-        [SerializeField] private Transform showNoticeRoot = null;
-        [SerializeField] private Text showNoticeText = null;
-
-        private void Start() {
-            CheckVersioning(onFetchSuccess, onFetchError);
-        }
-        /// <summary>
-        /// 展示错误
-        /// </summary>
-        /// <param name="obj"></param>
-        private void onFetchError(string obj) {
-            if (showNoticeText != null) {
-                showNoticeText.text = obj;
-            }
-            if (showNoticeRoot != null) {
-                showNoticeRoot.gameObject.SetActive(true);
+        [SerializeField] private string baseURL  = string.Empty;
+        private string webData;
+        private GameVersining currentDownloadVersioning;
+        public GameVersining NewVersion {
+            get {
+                return currentDownloadVersioning;
             }
         }
-
-        private void onFetchSuccess() {
-            
+        internal void CheckVersioning(Action<string> onErr, Action onLatestVersion, Action onFoundUpdateVersion) {
+            StartCoroutine(CheckStartup(onErr, onLatestVersion, onFoundUpdateVersion));
         }
 
-        internal void CheckVersioning(Action onOk, Action<string> onErr) {
-            StartCoroutine(CheckStartup(onOk, onErr));
-        }
-
-        private IEnumerator CheckStartup(Action onOk, Action<string> onErr) {
+        private IEnumerator CheckStartup(Action<string> onErr, Action onLatestVersion, Action onFoundUpdateVersion) {
             yield return null;
-            var co = CacheableDownloadHandler.GetBytes(baseURL + "/update.txt", false, (statusCode, header, body) => {
-                if (statusCode == 200) { // use new data
-
-                }
+          
+            var co = CacheableDownloadHandler.GetText(baseURL + "/update.txt", CacheOption.kNotCache, (statusCode, header, body) => {
                 switch (statusCode) {
                     case 200: // use new data=
-                        ParseStartupData(body.ToUTF8String());
-                        onOk();
+                        webData = body;
+                        ParseStartupData(onLatestVersion, onFoundUpdateVersion);
                         break;
                     case 304: // use cache daeta
-                        ParseStartupData(body.ToUTF8String());
-                        onOk();
+                        ParseStartupData(onLatestVersion, onFoundUpdateVersion);
                         break;
                     default:  // not respect this
                         onErr($"http ${statusCode}");
@@ -60,17 +41,50 @@ namespace BabyEngine {
             });
             StartCoroutine(co);
         }
+        
+        private void ParseStartupData(Action onLatestVersion, Action onFoundUpdateVersion) {
+            string locData = string.Empty;
+            string locPath = $"{Application.persistentDataPath}/update.txt";
+            if (File.Exists(locPath)) {
+                locData = File.ReadAllText(locPath);
+            }
+            var webVersion = new GameUpdateParser(webData).Parse();
+            var locVersion = new GameUpdateParser(locData).Parse();
 
-        private void ParseStartupData(string data) {
-            var p = new GameUpdateParser(this, baseURL);
-            p.Parse(data);
+            Debug.Log($"本地版本:{locVersion.Version} 线上版本:{webVersion.Version}");
+            if (locVersion.Version == webVersion.Version) {
+                onLatestVersion?.Invoke();
+            } else {
+                // 需要更新
+                var diffVersion = locVersion.ToVersion(webVersion);
+                Debug.Log($"版本 {diffVersion.Version} 差异文件数量: {diffVersion.FileCount} 文件大小: {diffVersion.SizeString}");
+                currentDownloadVersioning = diffVersion;
+                onFoundUpdateVersion?.Invoke();
+            }
         }
 
-        void AfterUpdateDone() {
-            if (app == null) {
-                
+        public void StartDownload(Action<bool> action) {
+            if (currentDownloadVersioning == null) {
+                return;
             }
-            app.PerfomLuaStart();
+            
+            StartCoroutine(currentDownloadVersioning.Download(baseURL, (ok) => {
+                if (ok) { // 如果都下载成功了 就保存版本信息
+                    string locPath = $"{Application.persistentDataPath}/update.txt";
+                    File.WriteAllText(locPath, webData);
+                }
+                action?.Invoke(ok);
+            }));
+        }
+        
+        public float Progress {
+            get {
+                if (currentDownloadVersioning == null) {
+                    return 0;
+                } else {
+                    return currentDownloadVersioning.Progress;
+                }
+            }
         }
     }
 }
