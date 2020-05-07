@@ -27,23 +27,29 @@ namespace BabyEngine {
         }
 
         public void PerfomLuaStart() {
-            onLuaStart(() => {
-                if (isStart)
-                    return;
-                isStart = true;
-                InitLua();
-                Invoke("RunLua", 0);
-            });
+            //onLuaStart(() => {
+            //    if (isStart)
+            //        return;
+            //    isStart = true;
+            //    InitLua();
+            //    Invoke("RunLua", 0);
+            //});
+
+            if (isStart)
+                return;
+            isStart = true;
+            InitLua();
+            Invoke("RunLua", 0);
         }
 
 
-        void onLuaStart(Action cb) {
-            if (Installer.IsInstall()) {
-                cb();
-            } else {
-                Installer.DoInstall(cb);
-            }
-        }
+        //void onLuaStart(Action cb) {
+        //    if (Installer.IsInstall()) {
+        //        cb();
+        //    } else {
+        //        Installer.DoInstall(cb);
+        //    }
+        //}
 
         private void InitManager() {
             gameObject.AddComponent<ResourceManager>();
