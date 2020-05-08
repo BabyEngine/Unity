@@ -17,12 +17,12 @@ public class UpdateCaseGamePacker : MonoBehaviour {
 
     [MenuItem("Tools/Build/SubGame/UpdateCase/iOS Resource", false, 101)]
     public static void BuildiPhoneResource() {
-        Packer.BuildAssetResource(BuildTarget.iOS, "Game/UpdateCase/res/", $"{GameConf.AB_PATH}updatecase/ios/");
+        Packer.BuildAssetResource(BuildTarget.iOS, "Game/UpdateCase/res/", $"{GameConf.AB_PATH}updatecase");
     }
 
     [MenuItem("Tools/Build/SubGame/UpdateCase/Win Resource", false, 102)]
     public static void BuildWindowsResource() {
-        Packer.BuildAssetResource(BuildTarget.StandaloneWindows, "Game/UpdateCase/res/", $"{GameConf.AB_PATH}/win/");
+        Packer.BuildAssetResource(BuildTarget.StandaloneWindows, "Game/UpdateCase/res/", $"{GameConf.AB_PATH}updatecase");
     }
 
     [MenuItem("Tools/Build/SubGame/UpdateCase/Build Hash File", false, 103)]

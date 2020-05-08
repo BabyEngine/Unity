@@ -24,6 +24,9 @@ namespace BabyEngine {
                 var folders = stack.Pop();
                 Directory.CreateDirectory(folders.Target);
                 foreach (var file in Directory.GetFiles(folders.Source, "*.*")) {
+                    if (file.EndsWith(".meta") || file.Contains(".DS_Store")) {
+                        continue;
+                    }
                     File.Copy(file, Path.Combine(folders.Target, Path.GetFileName(file)), true);
                 }
 

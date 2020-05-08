@@ -46,8 +46,10 @@ namespace BabyEngine {
                         for (int i = 1; i < tokens.Length; i++) {
                             Args[i - 1] = tokens[i];
                         }
-
-                        gameVersining.Add(new ResourceData(tokens[0], Args));
+                        var r = ResourceData.NewResourceData(tokens[0], Args);
+                        if (r != null) {
+                            gameVersining.Add(r);
+                        }
                     }
                 } catch (Exception e) {
                     Debug.LogError(e);

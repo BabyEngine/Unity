@@ -135,7 +135,7 @@ namespace BabyEngine {
                     Directory.CreateDirectory("Assets/Resources");
                 }
                 File.WriteAllText("Assets/Resources/baby_version.txt", version);
-                AddABFile("lua", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}");
+                AddABFile("lua", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}", string.Empty);
 
                 var elapsedTime = DateTime.Now.Subtract(startTime);
                 Debug.Log($"copy {count} lua files, elapsed time:{elapsedTime} version:{version}");
@@ -144,12 +144,12 @@ namespace BabyEngine {
             } finally {
                 // 清理战场
                 DeleteDir($"Assets/{GameConf.LUA_TEMP_PATH}");
-                //DeleteDir(GameConf.AB_PATH);
+                DeleteDir(GameConf.AB_PATH);
                 AssetDatabase.Refresh();
             }
             return outputFilepath;
         }
-        static void AddABFile(string type, string filepath) {
+        static void AddABFile(string type, string filepath, string platform) {
             filepath = filepath.Replace("//", "/");
             var statusFile = $"{Application.streamingAssetsPath}/build_status.txt";
             // load
@@ -158,9 +158,16 @@ namespace BabyEngine {
                 lines.AddRange(File.ReadAllLines(statusFile));
             }
             // add
-            lines.Add($"{type}|{filepath}");
+            string info;
+            if (string.IsNullOrEmpty(platform)) {
+                info = $"{type}|{filepath}";
+            } else {
+                info = $"{type}|{filepath}|{platform}";
+            }
+            
+            lines.Add(info);
             // write
-            File.WriteAllLines(statusFile, lines.Distinct());
+            File.WriteAllLines(statusFile, lines.Distinct().ToArray());
         }
         private static void DeleteDir(string dir) {
             if (Directory.Exists(dir)) {
@@ -194,7 +201,7 @@ namespace BabyEngine {
                 path = Application.dataPath + "/" + path;
                 List<string> tempList = new List<string>();
                 // 遍历文件
-                string abPath = Path.GetDirectoryName(outputPath);
+                string abPath = Path.GetDirectoryName(outputPath) + "/";
                 var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
                 List<string> abNames = new List<string>();
                 Action<string> handleDir = (string item) => {
@@ -212,12 +219,13 @@ namespace BabyEngine {
                     if (files.Length == 0) {
                         return;
                     }
-                    string temp = item.Substring(Application.dataPath.Length + 1);//.Replace("/", "-").Replace("\\", "-");
+                    string temp = item.Substring(Application.dataPath.Length + 1);
                     if (item == path) {
                         temp = temp.Substring(0, temp.Length - 1);
                     }
-                    var abName = extSubDir + "/" + temp + ".unity3d";
+                    var abName = $"{target.ToString()}/" + extSubDir + temp + ".unity3d";
                     AssetBundleBuild build = new AssetBundleBuild();
+                    Debug.Log($"构建路径: extSubDi: {extSubDir} abName:{abName} temp:{temp}");
                     build.assetBundleName = abName;
                     build.assetNames = files;
                     maps.Add(build);
@@ -241,12 +249,13 @@ namespace BabyEngine {
                     var filepath = $"{Application.streamingAssetsPath}/{abName}";
                     //Debug.Log(filepath);
                     allAssetBundleFilename.Add(filepath);
-                    AddABFile("res", filepath);
+                    AddABFile("res", filepath , target.ToString().ToLower());
                 }
                 if (!Directory.Exists($"{Application.streamingAssetsPath}/{extSubDir}")) {
                     Directory.CreateDirectory($"{Application.streamingAssetsPath}/{extSubDir}");
                 }
-                Utility.CopyDirectory(outputPath, $"{Application.streamingAssetsPath}/{extSubDir}");
+                var copyPath = $"{GameConf.AB_PATH}{target.ToString()}/{extSubDir}";
+                Utility.CopyDirectory(copyPath, $"{Application.streamingAssetsPath}/{target.ToString().ToLower()}/{extSubDir}");
 
                 AssetDatabase.Refresh();
                 var elapsedTime = DateTime.Now.Subtract(startTime);
@@ -255,8 +264,7 @@ namespace BabyEngine {
                 Debug.LogError(e);
             } finally {
                 // 清理战场
-                DeleteDir($"Assets/{GameConf.LUA_TEMP_PATH}");
-                DeleteDir(GameConf.AB_PATH);
+                //DeleteDir(GameConf.AB_PATH);
                 AssetDatabase.Refresh();
             }
             return allAssetBundleFilename.ToArray();
@@ -285,15 +293,24 @@ namespace BabyEngine {
             StringWriter sw = new StringWriter();
             foreach(var line in lines) {
                 var tokens = line.Split('|');
-                if (tokens == null || tokens.Length != 2) {
+                if (tokens == null || tokens.Length == 0) {
                     continue;
                 }
                 var type = tokens[0];
                 var filepath = tokens[1];
+                string platform = "";
+                if (tokens.Length > 2) {
+                    platform = tokens[2];
+                }
                 var hash = CalculateMD5(filepath);
                 var size = FileSize(filepath);
                 var path = filepath.Replace(Application.streamingAssetsPath + "/", "");
-                var info = $"{type}|{hash}|{size}|{path.ToLower()}";
+                string info;
+                if (string.IsNullOrEmpty(platform)) {
+                    info = $"{type}|{hash}|{size}|{path.ToLower()}";
+                } else {
+                    info = $"{type}|{hash}|{size}|{path.ToLower()}|{platform}";
+                }
                 Debug.Log(info);
                 sw.WriteLine(info);
             }
