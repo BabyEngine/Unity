@@ -16,7 +16,7 @@ namespace BabyEngine {
 
         [MenuItem("Tools/截图")]
         public static void CaptureScreen() {
-            UnityEngine.ScreenCapture.CaptureScreenshot("截图-" + DateTime.Now + ".png");
+            ScreenCapture.CaptureScreenshot("截图-" + DateTime.Now + ".png");
         }
         #region create lua file
         [MenuItem("Assets/Create/new.lua")]

@@ -11,17 +11,26 @@ using UnityEngine;
 namespace BabyEngine {
     public class Packer {
         
-        private static List<String> DirSearch(string sDir) {
-            List<String> files = new List<String>();
+        public static string ReleaseOutputDir {
+            get {
+                return $"{Application.dataPath.RemoveSuffix("Assets")}ReleaseAssetBundle/";
+            }
+        }
+        
+        private static List<string> DirSearch(string sDir) {
+            List<string> files = new List<string>();
             try {
                 foreach (string f in Directory.GetFiles(sDir)) {
-
+                    string ext = Path.GetExtension(f);
+                    if (ext.Equals(".meta")) {
+                        continue;
+                    }
                     files.Add(f);
                 }
                 foreach (string d in Directory.GetDirectories(sDir)) {
-                    files.AddRange(DirSearch(d));
+                    files.AddRange(DirSearch(d.Replace('\\', '/')));
                 }
-            } catch (System.Exception e) {
+            } catch (Exception e) {
                 Debug.LogError(e);
             }
 
@@ -123,11 +132,10 @@ namespace BabyEngine {
                 AssetDatabase.Refresh();
                 // 复制 GameConf.LUA_FRAMEWORK
                 
-                Directory.CreateDirectory(Application.streamingAssetsPath+$"/{extSubDir}");
-                File.Copy(outputPath, $"{Application.streamingAssetsPath}/{extSubDir}/{abName}", true);
-                File.Copy(outputPath+ ".manifest", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}.manifest", true);
+                Directory.CreateDirectory($"{ReleaseOutputDir}/{extSubDir}");
+                File.Copy(outputPath, $"{ReleaseOutputDir}/{extSubDir}/{abName}", true);
                 AssetDatabase.Refresh();
-                outputFilepath = $"{Application.streamingAssetsPath}/{extSubDir}/{abName}";
+                outputFilepath = $"{ReleaseOutputDir}/{extSubDir}/{abName}";
 
                 FileInfo fileInfo = new FileInfo(outputPath);
                 var version = $"{fileInfo.CreationTime.ToFileTimeUtc()}";
@@ -135,7 +143,7 @@ namespace BabyEngine {
                     Directory.CreateDirectory("Assets/Resources");
                 }
                 File.WriteAllText("Assets/Resources/baby_version.txt", version);
-                AddABFile("lua", $"{Application.streamingAssetsPath}/{extSubDir}/{abName}", string.Empty);
+                AddABFile("lua", $"{ReleaseOutputDir}/{extSubDir}/{abName}", string.Empty);
 
                 var elapsedTime = DateTime.Now.Subtract(startTime);
                 Debug.Log($"copy {count} lua files, elapsed time:{elapsedTime} version:{version}");
@@ -150,8 +158,9 @@ namespace BabyEngine {
             return outputFilepath;
         }
         static void AddABFile(string type, string filepath, string platform) {
+            platform = platform.ToLower();
             filepath = filepath.Replace("//", "/");
-            var statusFile = $"{Application.streamingAssetsPath}/build_status.txt";
+            var statusFile = $"{ReleaseOutputDir}/build_status.txt";
             // load
             List<string> lines = new List<string>();
             if (File.Exists(statusFile)) {
@@ -195,8 +204,8 @@ namespace BabyEngine {
                     EditorUtility.DisplayDialog("提醒", "运行中或编译未完成", "确定");
                     return allAssetBundleFilename.ToArray();
                 }
-                if (!Directory.Exists(Application.streamingAssetsPath)) {
-                    Directory.CreateDirectory(Application.streamingAssetsPath);
+                if (!Directory.Exists(ReleaseOutputDir)) {
+                    Directory.CreateDirectory(ReleaseOutputDir);
                 }
                 path = Application.dataPath + "/" + path;
                 List<string> tempList = new List<string>();
@@ -223,9 +232,9 @@ namespace BabyEngine {
                     if (item == path) {
                         temp = temp.Substring(0, temp.Length - 1);
                     }
-                    var abName = $"{target.ToString()}/" + extSubDir + temp + ".unity3d";
+                    var abName = $"{target.ToString()}/" + extSubDir + temp + GameConf.AB_EXT;
+                    
                     AssetBundleBuild build = new AssetBundleBuild();
-                    Debug.Log($"构建路径: extSubDi: {extSubDir} abName:{abName} temp:{temp}");
                     build.assetBundleName = abName;
                     build.assetNames = files;
                     maps.Add(build);
@@ -243,20 +252,22 @@ namespace BabyEngine {
                 }
                 BuildPipeline.BuildAssetBundles(GameConf.AB_PATH, maps.ToArray(), BuildAssetBundleOptions.None, target);
 
-                // copy to StreamingAssets
-                Directory.CreateDirectory(Application.streamingAssetsPath + $"/{extSubDir}");
+                // copy to ReleaseOutputDir
+                Directory.CreateDirectory($"{ReleaseOutputDir}/{extSubDir}");
                 foreach (var abName in abNames) {
-                    var filepath = $"{Application.streamingAssetsPath}/{abName}";
-                    //Debug.Log(filepath);
+                    var filepath = $"{ReleaseOutputDir}/{abName}";
                     allAssetBundleFilename.Add(filepath);
                     AddABFile("res", filepath , target.ToString().ToLower());
                 }
-                if (!Directory.Exists($"{Application.streamingAssetsPath}/{extSubDir}")) {
-                    Directory.CreateDirectory($"{Application.streamingAssetsPath}/{extSubDir}");
+                if (!Directory.Exists($"{ReleaseOutputDir}/{extSubDir}")) {
+                    Directory.CreateDirectory($"{ReleaseOutputDir}/{extSubDir}");
                 }
                 var copyPath = $"{GameConf.AB_PATH}{target.ToString()}/{extSubDir}";
-                Utility.CopyDirectory(copyPath, $"{Application.streamingAssetsPath}/{target.ToString().ToLower()}/{extSubDir}");
-
+                Utility.CopyDirectory(copyPath, $"{ReleaseOutputDir}/{target.ToString().ToLower()}/{extSubDir}", new string[] { ".manifest"});
+                // Copy AssetBundleManifest
+                var manifestPath = $"{ReleaseOutputDir}/{target.ToString().ToLower()}/{extSubDir}/manifest{GameConf.AB_EXT}";
+                AddABFile("res", manifestPath, target.ToString().ToLower());
+                File.Copy($"{GameConf.AB_PATH}/ABs", manifestPath, true);
                 AssetDatabase.Refresh();
                 var elapsedTime = DateTime.Now.Subtract(startTime);
                 Debug.Log($"build {maps.Count} AB, elapsed time:{elapsedTime}");
@@ -264,7 +275,7 @@ namespace BabyEngine {
                 Debug.LogError(e);
             } finally {
                 // 清理战场
-                //DeleteDir(GameConf.AB_PATH);
+                DeleteDir(GameConf.AB_PATH);
                 AssetDatabase.Refresh();
             }
             return allAssetBundleFilename.ToArray();
@@ -273,9 +284,15 @@ namespace BabyEngine {
 
         #endregion
         #region 生成Hash文件
-        public static void ResetHashFile() {
-            var statusFile = $"{Application.streamingAssetsPath}/build_status.txt";
-            var outputFile = $"{Application.streamingAssetsPath}/update.txt";
+        public static void RemoveBuildStatusFile() {
+            var statusFile = $"{ReleaseOutputDir}/build_status.txt";
+            if (File.Exists(statusFile)) {
+                File.Delete(statusFile);
+            }
+        }
+            public static void ResetHashFile() {
+            var statusFile = $"{ReleaseOutputDir}/build_status.txt";
+            var outputFile = $"{ReleaseOutputDir}/update.txt";
             if (File.Exists(statusFile)) {
                 File.Delete(statusFile);
             }
@@ -284,8 +301,8 @@ namespace BabyEngine {
             }
         }
         public static void BuildHashFile() {
-            var statusFile = $"{Application.streamingAssetsPath}/build_status.txt";
-            var outputFile = $"{Application.streamingAssetsPath}/update.txt";
+            var statusFile = $"{ReleaseOutputDir}/build_status.txt";
+            var outputFile = $"{ReleaseOutputDir}/update.txt";
             List<string> lines = new List<string>();
             if (File.Exists(statusFile)) {
                 lines.AddRange(File.ReadAllLines(statusFile));
@@ -304,7 +321,7 @@ namespace BabyEngine {
                 }
                 var hash = CalculateMD5(filepath);
                 var size = FileSize(filepath);
-                var path = filepath.Replace(Application.streamingAssetsPath + "/", "");
+                var path = filepath.Replace(ReleaseOutputDir, "");
                 string info;
                 if (string.IsNullOrEmpty(platform)) {
                     info = $"{type}|{hash}|{size}|{path.ToLower()}";
@@ -330,5 +347,17 @@ namespace BabyEngine {
             return new System.IO.FileInfo(filename).Length;
         }
         #endregion
+
+        public static void BuildAll(BuildTarget target, string gameName) {
+            if (Directory.Exists(ReleaseOutputDir)) {
+                Directory.CreateDirectory(ReleaseOutputDir);
+            }
+            Packer.ResetHashFile();
+            Packer.BuildLua();
+            Packer.makeLuaAssetBundle($"Game/{gameName}/lua/", $"{GameConf.AB_PATH}{gameName}/src{GameConf.AB_EXT}");
+            Packer.BuildAssetResource(target, $"Game/{gameName}/res/", $"{GameConf.AB_PATH}{gameName}");
+            Packer.BuildHashFile();
+            Packer.RemoveBuildStatusFile();
+        }
     }
 }

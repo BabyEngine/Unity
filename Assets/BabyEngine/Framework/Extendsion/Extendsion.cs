@@ -30,6 +30,14 @@ namespace BabyEngine {
             return vv.ToByteSize();
         }
 
+        public static string RemoveSuffix(this string s, string suffix) {
+            if (s.EndsWith(suffix)) {
+                return s.Substring(0, s.Length - suffix.Length);
+            } else {
+                return s;
+            }
+        }
+
         public static string ToByteSize(this long val) {
             string unit = "";
             float v = val;

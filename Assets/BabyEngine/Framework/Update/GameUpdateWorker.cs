@@ -11,6 +11,13 @@ namespace BabyEngine {
     /// </summary>
     public class GameUpdateWorker : MonoBehaviour {
         [SerializeField] private string baseURL  = string.Empty;
+
+        private string BASEURL {
+            get {
+                return baseURL + $"/{GameConf.PlatformName.ToLower()}";
+            }
+        }
+
         private string webData;
         private GameVersining currentDownloadVersioning;
         public GameVersining NewVersion {
@@ -24,18 +31,20 @@ namespace BabyEngine {
 
         private IEnumerator CheckStartup(Action<string> onErr, Action onLatestVersion, Action onFoundUpdateVersion) {
             yield return null;
-          
-            var co = CacheableDownloadHandler.GetText(baseURL + "/update.txt", CacheOption.kNotCache, (statusCode, header, body) => {
+            var co = CacheableDownloadHandler.GetText(BASEURL + $"/update.txt", CacheOption.kCacheTemporary, (statusCode, header, body) => {
+                webData = string.Empty;
                 switch (statusCode) {
                     case 200: // use new data=
                         webData = body;
                         ParseStartupData(onLatestVersion, onFoundUpdateVersion);
                         break;
                     case 304: // use cache daeta
+                        webData = body;
                         ParseStartupData(onLatestVersion, onFoundUpdateVersion);
                         break;
                     default:  // not respect this
-                        onErr($"http ${statusCode}");
+                        onErr($"发生错误, HTTP_STATUS: {statusCode}");
+                        Debug.LogError($"发生错误, HTTP_STATUS: {statusCode} {BASEURL}");
                         break;
                 }
             });
@@ -68,7 +77,7 @@ namespace BabyEngine {
                 return;
             }
             
-            StartCoroutine(currentDownloadVersioning.Download(baseURL, (ok) => {
+            StartCoroutine(currentDownloadVersioning.Download(BASEURL, (ok) => {
                 if (ok) { // 如果都下载成功了 就保存版本信息
                     string locPath = $"{Application.persistentDataPath}/update.txt";
                     File.WriteAllText(locPath, webData);

@@ -8,7 +8,8 @@ namespace BabyEngine {
     public class GameUpdateParser {
         string content = string.Empty;
         public GameUpdateParser(string content) {
-            this.content = content; 
+            if (content != null)
+                this.content = content; 
         }
         
         /// <summary>
@@ -27,7 +28,6 @@ namespace BabyEngine {
                     
                     var tokens = cleaned.Split('|');
                     if (tokens == null || tokens.Length < 2) {
-                        Debug.LogWarning($"format error:{cleaned}");
                         continue;// invalid data
                     }
                     var ActionName = tokens[0];

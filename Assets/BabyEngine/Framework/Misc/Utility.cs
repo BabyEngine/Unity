@@ -16,7 +16,7 @@ namespace BabyEngine {
             return TextureToSprite(texture);
         }
 
-        public static void CopyDirectory(string source, string target) {
+        public static void CopyDirectory(string source, string target, string[] ignoreFileExt = null) {
             var stack = new Stack<Folders>();
             stack.Push(new Folders(source, target));
 
@@ -24,7 +24,17 @@ namespace BabyEngine {
                 var folders = stack.Pop();
                 Directory.CreateDirectory(folders.Target);
                 foreach (var file in Directory.GetFiles(folders.Source, "*.*")) {
-                    if (file.EndsWith(".meta") || file.Contains(".DS_Store")) {
+                    bool isIgnoreFile = false;
+                    if (ignoreFileExt != null) {
+                        foreach(var ext in ignoreFileExt) {
+                            if(file.EndsWith(ext)) {
+                                isIgnoreFile = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (isIgnoreFile) {
                         continue;
                     }
                     File.Copy(file, Path.Combine(folders.Target, Path.GetFileName(file)), true);

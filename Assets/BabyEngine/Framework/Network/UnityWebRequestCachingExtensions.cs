@@ -308,7 +308,7 @@ namespace BabyEngine {
 
         public static IEnumerator GetText(string url, CacheOption option, Action<int, Dictionary<string, string>, string> cb) {
             UnityWebRequest www = UnityWebRequest.Get(url);
-            www.SetCacheable(option);
+            var h = www.SetCacheable(option);
             yield return www.SendWebRequest();
             while (!www.isDone)
                 yield return true;
