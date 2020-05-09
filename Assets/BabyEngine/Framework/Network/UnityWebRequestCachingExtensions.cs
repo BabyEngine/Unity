@@ -10,8 +10,17 @@ using System.Collections.Generic;
 
 namespace BabyEngine {
     public enum CacheOption {
+        /// <summary>
+        /// 不要缓存
+        /// </summary>
         kNotCache,
+        /// <summary>
+        /// 缓存到临时目录
+        /// </summary>
         kCacheTemporary,
+        /// <summary>
+        /// 缓存到持久化目录
+        /// </summary>
         kCachePersisten
     }
     /// <summary>
@@ -350,4 +359,82 @@ namespace BabyEngine {
 
         #endregion
         }
+
+    #region HTTPJob
+    public class HTTPJob {
+        public bool isDone = false;
+        bool isStop = false;
+        long length;
+        float progress = 0;
+        string url;
+        string savePath;
+        public Action OnOk;
+        public Action<string> OnErr;
+        public HTTPJob(string url, string savePath) {
+            this.url = url;
+            this.savePath = savePath;
+        }
+        public void Stop() {
+            isStop = true;
+        }
+
+        public IEnumerator Start() {
+            var headRequest = UnityWebRequest.Head(url);
+            yield return headRequest.SendWebRequest();
+            if (headRequest.isNetworkError) {
+                OnErr?.Invoke(headRequest.error);
+                yield break;
+            }
+            long.TryParse(headRequest.GetResponseHeader("Content-Length"), out length);
+
+            var dir = Path.GetDirectoryName(savePath);
+            if (!Directory.Exists(dir)) {
+                Directory.CreateDirectory(dir);
+            }
+
+            using (var fs = new FileStream(savePath, FileMode.OpenOrCreate, FileAccess.ReadWrite)) {
+                var fileLength = fs.Length;
+                if (fileLength < length) {
+                    fs.Seek(fileLength, SeekOrigin.Begin);
+                    var request = UnityWebRequest.Get(url);
+                    request.SetRequestHeader("Range", "bytes=" + fileLength + "-" + length);
+                    request.SendWebRequest(); // 这里不能 yiled 否则会一直下载到结束, 不能中断了
+                    var index = 0;
+                    while (!request.isDone) {
+                        if (isStop) {
+                            break;
+                        }
+                        if (request.isNetworkError) {
+                            OnErr?.Invoke(request.error);
+                            break;
+                        }
+                        yield return null;
+                        var buff = request.downloadHandler.data;
+                        if (buff != null) {
+                            var len = buff.Length - index;
+                            fs.Write(buff, index, len);
+                            index += len;
+                            fileLength += len;
+
+                            if (fileLength == length) {
+                                // done
+                                progress = 1;
+                            } else {
+                                progress = fileLength / (float)length;
+                            }
+                        }
+                    }
+                } else {
+                    progress = 1;
+                }
+
+                fs.Close();
+                fs.Dispose();
+            }
+            if (progress >= 1) {
+                isDone = true;
+            }
+        }
+    }
+    #endregion
 }
