@@ -12,7 +12,7 @@ namespace BabyEngine {
     public class GameVersining {
         public int Version = 0;
         private List<ResourceData> resourceDatas = new List<ResourceData>();
-
+        public bool hasError;
         public void Add(ResourceData resourceData) {
             resourceDatas.Add(resourceData);
             resourceDatas = resourceDatas.Distinct().ToList();

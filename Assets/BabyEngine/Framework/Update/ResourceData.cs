@@ -14,7 +14,6 @@ namespace BabyEngine {
         public string Hash;
         public long Size;
         public string Path;
-        public string Platform;
         public AssetBundle assetBundle;
 
         public static ResourceData NewResourceData(string actionName, string[] args) {
@@ -30,7 +29,7 @@ namespace BabyEngine {
                 long.TryParse(args[1], out result.Size);
                 result.Path = args[2];
             } else if (actionName == "res") {
-                if (args.Length != 4) {
+                if (args.Length != 3) {
                     Debug.LogWarning($"res format erorr({args.Length})" + string.Join("|", args));
                     return null;
                 }
@@ -39,14 +38,6 @@ namespace BabyEngine {
                 result.Hash = args[0];
                 long.TryParse(args[1], out result.Size);
                 result.Path = args[2];
-                result.Platform = args[3];
-                string curPlatform = GameConf.PlatformName;
-
-                if (!curPlatform.Equals(result.Platform)) {
-                    Debug.Log(result.Platform);
-                    Debug.Log(curPlatform);
-                    return null;
-                }
             } else if (actionName == "dep") {
                 if (args.Length != 4) {
                     Debug.LogWarning($"lua format erorr({args.Length})" + string.Join("|", args));

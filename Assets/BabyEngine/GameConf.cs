@@ -16,14 +16,5 @@ namespace BabyEngine {
         public static readonly string AB_PATH = "Assets/ABs/";
         public static readonly string AB_EXT = ".unity3d";
         #endregion
-
-        public static string PlatformName {
-            get {
-                if (Application.platform == RuntimePlatform.WindowsEditor) {
-                    return "standalonewindows";
-                }
-                return Application.platform.ToString().ToLower();
-            }
-        }
     }
 }

@@ -10,7 +10,6 @@ using UnityEditor.Callbacks;
 using UnityEngine;
 namespace BabyEngine {
     public class Packer {
-        
         public static string ReleaseOutputDir {
             get {
                 return $"{Application.dataPath.RemoveSuffix("Assets")}ReleaseAssetBundle/";
@@ -50,9 +49,6 @@ namespace BabyEngine {
 
         [MenuItem("Tools/Build/Android")]
         public static void BuildAndroid() {
-            // 
-            BuildLua();
-            //
             var startTime = DateTime.Now;
             List<string> levels = new List<string>();
             foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes) {
@@ -65,100 +61,107 @@ namespace BabyEngine {
             var elapsedTime = DateTime.Now.Subtract(startTime);
             Debug.Log($"build android.apk elapsed time:{elapsedTime}");
         }
-        #region 复制lua
-        [MenuItem("Tools/Build/Copy Lua Framework")]
-        public static void BuildLua() {
-            makeLuaAssetBundle(GameConf.LUA_BASE_PATH, $"{GameConf.AB_PATH}{GameConf.LUA_FRAMEWORK}", true);
-        }
-        #endregion
-
+ 
         #region 打包lua
-        public static string makeLuaAssetBundle(string subDir, string outputPath, bool moveToRoot = false) {
-            string outputFilepath = string.Empty;
-            try {
-                var startTime = DateTime.Now;
-                string luaDir = $"{Application.dataPath}/{subDir}";
-                List<string> luaFiles = DirSearch(luaDir);
-                // ignore .meta  files
-                luaFiles.RemoveAll(x => x.EndsWith(".meta"));
-                var outLuaFile = luaFiles.Select(s => s.Replace($"{Application.dataPath}/{subDir}", "lua/")).ToList();
-                // 
-                outLuaFile = luaFiles.Select(s => "lua/" + s).ToList();
-                // create
-                List<LuaSourceFile> luaSources = new List<LuaSourceFile>();
-                foreach (var file in luaFiles) {
-                    var bytes = File.ReadAllBytes(file);
-                    if (bytes != null) {
-                        luaSources.Add(new LuaSourceFile() {
-                            OutFile = file.Replace(luaDir, GameConf.LUA_TEMP_PATH).Replace("\\", "/").Replace(".lua", ".json"),
-                            code = bytes.ToUTF8String()
-                        });
-                    }
-                }
-                // create .bytes asset
-                int count = 0;
-                List<string> luaPaths = new List<string>();
-                foreach (var src in luaSources) {
-                    var tmp = Application.dataPath + $"/" + src.OutFile;
-                    var dir = Path.GetDirectoryName(tmp);
-                    Directory.CreateDirectory(dir);
-                    var outfile = $"Assets/{src.OutFile}";
-                    src.OutFile = src.OutFile.Replace(GameConf.LUA_TEMP_PATH, "").Replace(".json", ".lua");
+        static List<AssetBundleBuild> buildMap = new List<AssetBundleBuild>();
+        public static void BuildMe() {
+            var startTime = DateTime.Now;
+            SearchLuaToBuild(GameConf.LUA_BASE_PATH, $"{GameConf.AB_PATH}{GameConf.LUA_FRAMEWORK}");
+            
 
-                    File.WriteAllText(outfile, src.ToString());
-                    luaPaths.Add(outfile);
-                    count++;
-                }
-                AssetDatabase.Refresh();
-                //Create the array of bundle build details.
-                string abPath = Path.GetDirectoryName(outputPath).Replace("\\", "/");
-                string abName = Path.GetFileName(outputPath).Replace("\\", "/");
-               
-                List<AssetBundleBuild> buildMap = new List<AssetBundleBuild>();
-                AssetBundleBuild build = new AssetBundleBuild();
-                build.assetBundleName = abName;
-                build.assetNames = luaPaths.ToArray();
-
-                buildMap.Add(build);
-                // ext sub dirs
-                var extSubDir = abPath.Replace(GameConf.AB_PATH, "");
-                if(extSubDir == abPath) {
-                    extSubDir = string.Empty;
-                }
-                Directory.CreateDirectory(abPath);
-
-                BuildPipeline.BuildAssetBundles(abPath, buildMap.ToArray(), BuildAssetBundleOptions.None, BuildTarget.Android);
-               
-                AssetDatabase.Refresh();
-                // 复制 GameConf.LUA_FRAMEWORK
-                
-                Directory.CreateDirectory($"{ReleaseOutputDir}/{extSubDir}");
-                File.Copy(outputPath, $"{ReleaseOutputDir}/{extSubDir}/{abName}", true);
-                AssetDatabase.Refresh();
-                outputFilepath = $"{ReleaseOutputDir}/{extSubDir}/{abName}";
-
-                FileInfo fileInfo = new FileInfo(outputPath);
-                var version = $"{fileInfo.CreationTime.ToFileTimeUtc()}";
-                if (!Directory.Exists("Assets/Resources")) {
-                    Directory.CreateDirectory("Assets/Resources");
-                }
-                File.WriteAllText("Assets/Resources/baby_version.txt", version);
-                AddABFile("lua", $"{ReleaseOutputDir}/{extSubDir}/{abName}", string.Empty);
-
-                var elapsedTime = DateTime.Now.Subtract(startTime);
-                Debug.Log($"copy {count} lua files, elapsed time:{elapsedTime} version:{version}");
-            } catch (Exception e) {
-                Debug.LogError(e);
-            } finally {
-                // 清理战场
-                DeleteDir($"Assets/{GameConf.LUA_TEMP_PATH}");
-                DeleteDir(GameConf.AB_PATH);
-                AssetDatabase.Refresh();
-            }
-            return outputFilepath;
+            var elapsedTime = DateTime.Now.Subtract(startTime);
+            Debug.Log($" elapsed time:{elapsedTime}");
         }
-        static void AddABFile(string type, string filepath, string platform) {
-            platform = platform.ToLower();
+        private static void SearchLuaToBuild(string subDir, string outputPath) {
+            string luaDir = $"{Application.dataPath}/{subDir}";
+            List<string> luaFiles = DirSearch(luaDir);
+            // ignore .meta  files
+            luaFiles.RemoveAll(x => x.EndsWith(".meta"));
+            var outLuaFile = luaFiles.Select(s => s.Replace($"{Application.dataPath}/{subDir}", "lua/")).ToList();
+            // 
+            outLuaFile = luaFiles.Select(s => "lua/" + s).ToList();
+            // create
+            List<LuaSourceFile> luaSources = new List<LuaSourceFile>();
+            foreach (var file in luaFiles) {
+                var bytes = File.ReadAllBytes(file);
+                if (bytes != null) {
+                    luaSources.Add(new LuaSourceFile() {
+                        OutFile = file.Replace(luaDir, GameConf.LUA_TEMP_PATH).Replace("\\", "/").Replace(".lua", ".json"),
+                        code = bytes.ToUTF8String()
+                    });
+                }
+            }
+            // create .bytes asset
+            int count = 0;
+            List<string> luaPaths = new List<string>();
+            foreach (var src in luaSources) {
+                var tmp = Application.dataPath + $"/" + src.OutFile;
+                var dir = Path.GetDirectoryName(tmp);
+                Directory.CreateDirectory(dir);
+                var outfile = $"Assets/{src.OutFile}";
+                src.OutFile = src.OutFile.Replace(GameConf.LUA_TEMP_PATH, "").Replace(".json", ".lua");
+
+                File.WriteAllText(outfile, src.ToString());
+                luaPaths.Add(outfile);
+                count++;
+            }
+            AssetDatabase.Refresh();
+            //Create the array of bundle build details.
+            string abPath = Path.GetDirectoryName(outputPath).Replace("\\", "/");
+            string abName = Path.GetFileName(outputPath).Replace("\\", "/");
+            var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
+            
+            if (subDir.StartsWith("Game") && subDir.EndsWith("lua/")) {
+                abName = $"game/{extSubDir}/{abName}";
+            }
+            
+            AssetBundleBuild build = new AssetBundleBuild();
+            build.assetBundleName = abName;
+            build.assetNames = luaPaths.ToArray();
+            buildMap.Add(build);
+
+            AddABFile("lua", $"{GameConf.AB_PATH}{abName}");
+            abNames.Add(outputPath);
+        }
+
+        private static void BuildAssetBundles(BuildTarget target, string outputPath) {
+            string abPath = Path.GetDirectoryName(outputPath).Replace("\\", "/");
+            CreateDirIfNotExist(abPath);
+            BuildPipeline.BuildAssetBundles(abPath, buildMap.ToArray(), BuildAssetBundleOptions.None, target);
+        }
+        static void CreateDirIfNotExist(string path) {
+            if (!Directory.Exists(path)) {
+                Directory.CreateDirectory(path);
+            }
+        }
+    
+        static void CopyAssetBundles(string gameName) {
+            // rename Manifest
+            var tmp = GameConf.AB_PATH.RemoveSuffix("/");
+            tmp = tmp.Substring(tmp.LastIndexOf("/"));
+            var manifestName = GameConf.AB_PATH + tmp;
+            var manifestOutputPath = $"{GameConf.AB_PATH}manifest{GameConf.AB_EXT}";
+            if (File.Exists(manifestName)) {
+                if(File.Exists(manifestOutputPath)) {
+                    File.Delete(manifestOutputPath);
+                }
+                File.Move(manifestName, manifestOutputPath);
+            }
+            AddABFile("res", manifestOutputPath);
+            Utility.CopyDirectory(GameConf.AB_PATH, ReleaseOutputDir, new string[] { ".meta", ".manifest"});
+        }
+
+        private static void CleanAssetBundle() {
+            DeleteDir("Assets/"+GameConf.LUA_TEMP_PATH);
+            DeleteDir(GameConf.AB_PATH);
+
+            var statusFile = $"{ReleaseOutputDir}/build_status.txt";
+            if (File.Exists(statusFile)) {
+                File.Delete(statusFile);
+            }
+        }
+
+        static void AddABFile(string type, string filepath) {
             filepath = filepath.Replace("//", "/");
             var statusFile = $"{ReleaseOutputDir}/build_status.txt";
             // load
@@ -167,13 +170,7 @@ namespace BabyEngine {
                 lines.AddRange(File.ReadAllLines(statusFile));
             }
             // add
-            string info;
-            if (string.IsNullOrEmpty(platform)) {
-                info = $"{type}|{filepath}";
-            } else {
-                info = $"{type}|{filepath}|{platform}";
-            }
-            
+            string info = $"{type}|{filepath}";
             lines.Add(info);
             // write
             File.WriteAllLines(statusFile, lines.Distinct().ToArray());
@@ -195,102 +192,55 @@ namespace BabyEngine {
             ".json", ".txt", ".wav", ".ttf", ".fontsettings",
             ".controller", ".bytes"
         };
-        public static string[] BuildAssetResource(BuildTarget target, string path, string outputPath) {
-            List<string> allAssetBundleFilename = new List<string>();
-            try {
-                var startTime = DateTime.Now;
-                List<AssetBundleBuild> maps = new List<AssetBundleBuild>();
-                if (Application.isPlaying || EditorApplication.isCompiling) {
-                    EditorUtility.DisplayDialog("提醒", "运行中或编译未完成", "确定");
-                    return allAssetBundleFilename.ToArray();
-                }
-                if (!Directory.Exists(ReleaseOutputDir)) {
-                    Directory.CreateDirectory(ReleaseOutputDir);
-                }
-                path = Application.dataPath + "/" + path;
-                List<string> tempList = new List<string>();
-                // 遍历文件
-                string abPath = Path.GetDirectoryName(outputPath) + "/";
-                var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
-                List<string> abNames = new List<string>();
-                Action<string> handleDir = (string item) => {
-                    string[] files = Directory.GetFiles(item);
-                    tempList.Clear();
-                    foreach (string str in files) {
-                        string ext = Path.GetExtension(str);
-                        if (!filetype.Contains(ext)) {
-                            continue;
-                        }
-                        var tmp = "Assets" + str.Replace(Application.dataPath, "");
-                        tempList.Add(tmp);
-                    }
-                    files = tempList.ToArray();
-                    if (files.Length == 0) {
-                        return;
-                    }
-                    string temp = item.Substring(Application.dataPath.Length + 1);
-                    if (item == path) {
-                        temp = temp.Substring(0, temp.Length - 1);
-                    }
-                    var abName = $"{target.ToString()}/" + extSubDir + temp + GameConf.AB_EXT;
-                    
-                    AssetBundleBuild build = new AssetBundleBuild();
-                    build.assetBundleName = abName;
-                    build.assetNames = files;
-                    maps.Add(build);
-                    abNames.Add(abName);
-                };
+        static List<string> abNames = new List<string>();
+        private static void SearchResourceToBuild(string path, string outputPath) {
+            path = Application.dataPath + "/" + path;
+            List<string> tempList = new List<string>();
+            // 遍历文件
+            string abPath = Path.GetDirectoryName(outputPath) + "/";
+            var extSubDir = abPath.Replace(Path.DirectorySeparatorChar, '/').Replace(GameConf.AB_PATH, "");
 
-                string[] dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
-                handleDir(path);
-                foreach (string item in dirs) {
-                    handleDir(item);
+            Action<string> handleDir = (string item) => {
+                string[] files = Directory.GetFiles(item);
+                tempList.Clear();
+                foreach (string str in files) {
+                    string ext = Path.GetExtension(str);
+                    if (!filetype.Contains(ext)) {
+                        continue;
+                    }
+                    var tmp = "Assets" + str.Replace(Application.dataPath, "");
+                    tempList.Add(tmp);
                 }
-                // 构建AB
-                if (!Directory.Exists(GameConf.AB_PATH)) {
-                    Directory.CreateDirectory(GameConf.AB_PATH);
+                files = tempList.ToArray();
+                if (files.Length == 0) {
+                    return;
                 }
-                BuildPipeline.BuildAssetBundles(GameConf.AB_PATH, maps.ToArray(), BuildAssetBundleOptions.None, target);
+                string temp = item.Substring(Application.dataPath.Length + 1);
+                if (item == path) {
+                    temp = temp.Substring(0, temp.Length - 1);
+                }
 
-                // copy to ReleaseOutputDir
-                Directory.CreateDirectory($"{ReleaseOutputDir}/{extSubDir}");
-                foreach (var abName in abNames) {
-                    var filepath = $"{ReleaseOutputDir}/{abName}";
-                    allAssetBundleFilename.Add(filepath);
-                    AddABFile("res", filepath , target.ToString().ToLower());
-                }
-                if (!Directory.Exists($"{ReleaseOutputDir}/{extSubDir}")) {
-                    Directory.CreateDirectory($"{ReleaseOutputDir}/{extSubDir}");
-                }
-                var copyPath = $"{GameConf.AB_PATH}{target.ToString()}/{extSubDir}";
-                Utility.CopyDirectory(copyPath, $"{ReleaseOutputDir}/{target.ToString().ToLower()}/{extSubDir}", new string[] { ".manifest"});
-                // Copy AssetBundleManifest
-                var manifestPath = $"{ReleaseOutputDir}/{target.ToString().ToLower()}/{extSubDir}/manifest{GameConf.AB_EXT}";
-                AddABFile("res", manifestPath, target.ToString().ToLower());
-                File.Copy($"{GameConf.AB_PATH}/ABs", manifestPath, true);
-                AssetDatabase.Refresh();
-                var elapsedTime = DateTime.Now.Subtract(startTime);
-                Debug.Log($"build {maps.Count} AB, elapsed time:{elapsedTime}");
-            }catch(Exception e) {
-                Debug.LogError(e);
-            } finally {
-                // 清理战场
-                DeleteDir(GameConf.AB_PATH);
-                AssetDatabase.Refresh();
+                
+                var abName = extSubDir + temp + GameConf.AB_EXT;
+                AssetBundleBuild build = new AssetBundleBuild();
+                build.assetBundleName = abName;
+                build.assetNames = files;
+                buildMap.Add(build);
+                abNames.Add($"{abName}");
+                AddABFile("res", $"{GameConf.AB_PATH}{abName}");
+                // Debug.LogWarning($"temp: {temp} abName:{abName}");
+            };
+
+            string[] dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
+            handleDir(path);
+            foreach (string item in dirs) {
+                handleDir(item);
             }
-            return allAssetBundleFilename.ToArray();
         }
-
-
         #endregion
         #region 生成Hash文件
-        public static void RemoveBuildStatusFile() {
-            var statusFile = $"{ReleaseOutputDir}/build_status.txt";
-            if (File.Exists(statusFile)) {
-                File.Delete(statusFile);
-            }
-        }
-            public static void ResetHashFile() {
+        
+        public static void ResetBuildStatus() {
             var statusFile = $"{ReleaseOutputDir}/build_status.txt";
             var outputFile = $"{ReleaseOutputDir}/update.txt";
             if (File.Exists(statusFile)) {
@@ -299,37 +249,48 @@ namespace BabyEngine {
             if (File.Exists(outputFile)) {
                 File.Delete(outputFile);
             }
+
+            DeleteDir(ReleaseOutputDir);
+            Directory.CreateDirectory(ReleaseOutputDir);
+            abNames.Clear();
+            buildMap.Clear();
         }
         public static void BuildHashFile() {
             var statusFile = $"{ReleaseOutputDir}/build_status.txt";
             var outputFile = $"{ReleaseOutputDir}/update.txt";
             List<string> lines = new List<string>();
+            if(!Directory.Exists(ReleaseOutputDir)) {
+                Directory.CreateDirectory(ReleaseOutputDir);
+            }
             if (File.Exists(statusFile)) {
                 lines.AddRange(File.ReadAllLines(statusFile));
             }
             StringWriter sw = new StringWriter();
             foreach(var line in lines) {
-                var tokens = line.Split('|');
-                if (tokens == null || tokens.Length == 0) {
-                    continue;
+                try {
+                    var tokens = line.Split('|');
+                    if (tokens == null || tokens.Length == 0) {
+                        continue;
+                    }
+                    var type = tokens[0];
+                    var filepath = tokens[1];
+                    if (!File.Exists(filepath)) {
+                        Debug.Log($"文件不存在: {filepath}");
+                        continue;
+                    }
+                    var hash = CalculateMD5(filepath);
+                    var size = FileSize(filepath);
+                    var path = filepath.Replace(ReleaseOutputDir, "").ToLower();
+                    if (path.StartsWith(GameConf.AB_PATH.ToLower())) {
+                        path = path.Replace(GameConf.AB_PATH.ToLower(), "");
+                    }
+
+                    string info = $"{type}|{hash}|{size}|{path}";
+                    //Debug.Log(info);
+                    sw.WriteLine(info);
+                }catch(Exception e) {
+                    Debug.LogError(e);
                 }
-                var type = tokens[0];
-                var filepath = tokens[1];
-                string platform = "";
-                if (tokens.Length > 2) {
-                    platform = tokens[2];
-                }
-                var hash = CalculateMD5(filepath);
-                var size = FileSize(filepath);
-                var path = filepath.Replace(ReleaseOutputDir, "");
-                string info;
-                if (string.IsNullOrEmpty(platform)) {
-                    info = $"{type}|{hash}|{size}|{path.ToLower()}";
-                } else {
-                    info = $"{type}|{hash}|{size}|{path.ToLower()}|{platform}";
-                }
-                Debug.Log(info);
-                sw.WriteLine(info);
             }
             File.WriteAllText(outputFile, sw.ToString());
         }
@@ -344,20 +305,33 @@ namespace BabyEngine {
             }
         }
         static long FileSize(string filename) {
-            return new System.IO.FileInfo(filename).Length;
+            return new FileInfo(filename).Length;
         }
         #endregion
 
         public static void BuildAll(BuildTarget target, string gameName) {
-            if (Directory.Exists(ReleaseOutputDir)) {
-                Directory.CreateDirectory(ReleaseOutputDir);
+            var startTime = DateTime.Now;
+            try {
+                if (Application.isPlaying || EditorApplication.isCompiling) {
+                    EditorUtility.DisplayDialog("提醒", "运行中或编译未完成", "确定");
+                    return;
+                }
+                
+                ResetBuildStatus();
+                SearchLuaToBuild(GameConf.LUA_BASE_PATH, $"{GameConf.AB_PATH}{GameConf.LUA_FRAMEWORK}"); // framework
+                SearchLuaToBuild($"Game/{gameName}/lua/", $"{GameConf.AB_PATH}/{gameName}/src{GameConf.AB_EXT}"); // subgame
+                SearchResourceToBuild($"Game/{gameName}/res/", $"{GameConf.AB_PATH}{gameName}");
+                BuildAssetBundles(target, $"{GameConf.AB_PATH}{gameName}");
+                CopyAssetBundles(gameName);
+                BuildHashFile();
+            } catch (Exception e) {
+                Debug.LogError(e);
+            } finally {
+                CleanAssetBundle();
+                AssetDatabase.Refresh();
+                var elapsedTime = DateTime.Now.Subtract(startTime);
+                Debug.Log($"build elapsed time:{elapsedTime}");
             }
-            Packer.ResetHashFile();
-            Packer.BuildLua();
-            Packer.makeLuaAssetBundle($"Game/{gameName}/lua/", $"{GameConf.AB_PATH}{gameName}/src{GameConf.AB_EXT}");
-            Packer.BuildAssetResource(target, $"Game/{gameName}/res/", $"{GameConf.AB_PATH}{gameName}");
-            Packer.BuildHashFile();
-            Packer.RemoveBuildStatusFile();
         }
     }
 }

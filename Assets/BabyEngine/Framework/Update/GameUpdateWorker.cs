@@ -14,7 +14,10 @@ namespace BabyEngine {
 
         private string BASEURL {
             get {
-                return baseURL + $"/{GameConf.PlatformName.ToLower()}";
+                if (Application.platform == RuntimePlatform.WindowsEditor) {
+                    return "standalonewindows";
+                }
+                return baseURL + $"/{Application.platform.ToString().ToLower()}";
             }
         }
 
@@ -59,6 +62,11 @@ namespace BabyEngine {
             }
             var webVersion = new GameUpdateParser(webData).Parse();
             var locVersion = new GameUpdateParser(locData).Parse();
+            if (locVersion.hasError) {
+                // 
+                File.Delete(locPath);
+                locVersion = new GameUpdateParser("").Parse();
+            }
 
             Debug.Log($"本地版本:{locVersion.Version} 线上版本:{webVersion.Version}");
             if (locVersion.Version == webVersion.Version) {

@@ -11,7 +11,7 @@ using UnityEngine;
 public class UpdateCaseGamePacker : MonoBehaviour {
  
 
-    [MenuItem("Tools/Build/SubGame/UpdateCase/Win 打包", false, 102)]
+    [MenuItem("Tools/Build/SubGame/UpdateCase/Win 打包", false, 101)]
     public static void BuildAllWindows() {
         Packer.BuildAll(BuildTarget.StandaloneWindows, "UpdateCase");
     }

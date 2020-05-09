@@ -88,9 +88,25 @@ namespace XLua.CSObjectWrap
         {
 		    try {
             
+                ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
             
             
-                
+            
+			    int gen_param_count = LuaAPI.lua_gettop(L);
+            
+                if(gen_param_count == 3&& (LuaAPI.lua_isnil(L, 1) || LuaAPI.lua_type(L, 1) == LuaTypes.LUA_TSTRING)&& (LuaAPI.lua_isnil(L, 2) || LuaAPI.lua_type(L, 2) == LuaTypes.LUA_TSTRING)&& translator.Assignable<string[]>(L, 3)) 
+                {
+                    string _source = LuaAPI.lua_tostring(L, 1);
+                    string _target = LuaAPI.lua_tostring(L, 2);
+                    string[] _ignoreFileExt = (string[])translator.GetObject(L, 3, typeof(string[]));
+                    
+                    BabyEngine.Utility.CopyDirectory( _source, _target, _ignoreFileExt );
+                    
+                    
+                    
+                    return 0;
+                }
+                if(gen_param_count == 2&& (LuaAPI.lua_isnil(L, 1) || LuaAPI.lua_type(L, 1) == LuaTypes.LUA_TSTRING)&& (LuaAPI.lua_isnil(L, 2) || LuaAPI.lua_type(L, 2) == LuaTypes.LUA_TSTRING)) 
                 {
                     string _source = LuaAPI.lua_tostring(L, 1);
                     string _target = LuaAPI.lua_tostring(L, 2);
@@ -105,6 +121,8 @@ namespace XLua.CSObjectWrap
             } catch(System.Exception gen_e) {
                 return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
             }
+            
+            return LuaAPI.luaL_error(L, "invalid arguments to BabyEngine.Utility.CopyDirectory!");
             
         }
         

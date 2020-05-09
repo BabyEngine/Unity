@@ -49,6 +49,8 @@ namespace BabyEngine {
                         var r = ResourceData.NewResourceData(tokens[0], Args);
                         if (r != null) {
                             gameVersining.Add(r);
+                        } else {
+                            gameVersining.hasError = true;
                         }
                     }
                 } catch (Exception e) {

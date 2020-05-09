@@ -59,7 +59,7 @@ namespace BabyEngine {
         private AssetBundle manifestAssetBundle = null;
         private void LoadDependencies(string abPath) {
             if (manifest == null) {
-                string abManifest = $"{Application.persistentDataPath}/assets/{GameConf.PlatformName}/manifest{GameConf.AB_EXT}";
+                string abManifest = $"{Application.persistentDataPath}/assets/manifest{GameConf.AB_EXT}";
                 if (File.Exists(abManifest)) {
                     if (manifestAssetBundle == null) {
                         manifestAssetBundle = AssetBundleLoader.LoadFromFile(abManifest);
@@ -72,12 +72,12 @@ namespace BabyEngine {
                 return;
             } 
 
-            var deps = manifest.GetAllDependencies($"{GameConf.PlatformName}/{abPath}{GameConf.AB_EXT}");
+            var deps = manifest.GetAllDependencies($"{abPath}{GameConf.AB_EXT}");
             foreach(var dep in deps) {
                 //Debug.Log($"依赖项: {dep}");
                 LoadAB($"{Application.persistentDataPath}/assets/{dep}");
             }
-            LoadAB($"{Application.persistentDataPath}/assets/{GameConf.PlatformName}/{abPath}{GameConf.AB_EXT}");
+            LoadAB($"{Application.persistentDataPath}/assets/{abPath}{GameConf.AB_EXT}");
             //foreach (var kv in loadedAssetBundles) {
             //    Debug.Log($"已经加载的ab: {kv.Key}");
             //}
@@ -96,7 +96,7 @@ namespace BabyEngine {
                 if (assetBundle != null) {
                     string key = abPath;
 
-                    key = key.Replace($"{Application.persistentDataPath}/assets/{GameConf.PlatformName}/", "");
+                    key = key.Replace($"{Application.persistentDataPath}/assets/", "");
                     key = key.RemoveSuffix(GameConf.AB_EXT);
 
                     loadedAssetBundles[key] = assetBundle;
