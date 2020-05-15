@@ -13,7 +13,7 @@ namespace BabyEngine {
         [SerializeField] private Slider DownloadingProgress = null;
         GameUpdateState updateState = GameUpdateState.kChecking;
         public GameUpdateWorker worker;
-        public Transform gamePlayPanel;
+        public Transform activeWhenGameReady;
         public bool AutoStartGame;
         private void Start() {
             worker.gameObject.SetActive(true);
@@ -29,16 +29,22 @@ namespace BabyEngine {
         public void OnClickedDownload() {
             ChangeState(GameUpdateState.kDownloading);
             worker.StartDownload(onDownloadFinished);
+
         }
 
         public void OnClickedStartGame() {
             DoStartGame();
         }
 
+        public void OnClickedRepairFile() {
+            worker.gameObject.SetActive(true);
+            worker.CheckVersioning(onError, onLatestVersion, onFoundUpdateVersion, true);
+        }
+
         private void DoStartGame() {
             gameObject.SetActive(false);
             worker.gameObject.SetActive(false);
-            gamePlayPanel.gameObject.SetActive(true);
+            activeWhenGameReady.gameObject.SetActive(true);
 
             app.gameObject.SetActive(true);
             app.PerfomLuaStart();

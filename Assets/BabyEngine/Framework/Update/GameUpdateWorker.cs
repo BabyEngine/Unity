@@ -28,22 +28,28 @@ namespace BabyEngine {
                 return currentDownloadVersioning;
             }
         }
-        internal void CheckVersioning(Action<string> onErr, Action onLatestVersion, Action onFoundUpdateVersion) {
-            StartCoroutine(CheckStartup(onErr, onLatestVersion, onFoundUpdateVersion));
+        internal void CheckVersioning(Action<string> onErr, 
+            Action onLatestVersion, 
+            Action onFoundUpdateVersion,
+            bool ignoreVersionNumber=false) {
+            StartCoroutine(CheckStartup(onErr, onLatestVersion, onFoundUpdateVersion, ignoreVersionNumber));
         }
-
-        private IEnumerator CheckStartup(Action<string> onErr, Action onLatestVersion, Action onFoundUpdateVersion) {
+         
+        private IEnumerator CheckStartup(Action<string> onErr, 
+            Action onLatestVersion, 
+            Action onFoundUpdateVersion,
+            bool ignoreVersionNumber) {
             yield return null;
             var co = CacheableDownloadHandler.GetText(BASEURL + $"/update.txt", CacheOption.kCacheTemporary, (statusCode, header, body) => {
                 webData = string.Empty;
                 switch (statusCode) {
                     case 200: // use new data=
                         webData = body;
-                        ParseStartupData(onLatestVersion, onFoundUpdateVersion);
+                        ParseStartupData(onLatestVersion, onFoundUpdateVersion, ignoreVersionNumber);
                         break;
                     case 304: // use cache daeta
                         webData = body;
-                        ParseStartupData(onLatestVersion, onFoundUpdateVersion);
+                        ParseStartupData(onLatestVersion, onFoundUpdateVersion, ignoreVersionNumber);
                         break;
                     default:  // not respect this
                         onErr($"发生错误, HTTP_STATUS: {statusCode}");
@@ -54,7 +60,7 @@ namespace BabyEngine {
             StartCoroutine(co);
         }
         
-        private void ParseStartupData(Action onLatestVersion, Action onFoundUpdateVersion) {
+        private void ParseStartupData(Action onLatestVersion, Action onFoundUpdateVersion, bool ignoreVersionNumber) {
             string locData = string.Empty;
             string locPath = $"{Application.persistentDataPath}/update.txt";
             if (File.Exists(locPath)) {
@@ -69,7 +75,17 @@ namespace BabyEngine {
             }
 
             Debug.Log($"本地版本:{locVersion.Version} 线上版本:{webVersion.Version}");
-            if (locVersion.Version == webVersion.Version) {
+            bool versionReady;
+            if (ignoreVersionNumber == false) {
+                if (locVersion.Version == webVersion.Version) {
+                    versionReady = true;
+                } else {
+                    versionReady = false;
+                }
+            } else {
+                versionReady = true;
+            }
+            if (versionReady) {
                 onLatestVersion?.Invoke();
             } else {
                 // 需要更新
