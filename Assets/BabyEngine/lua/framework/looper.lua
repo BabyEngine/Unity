@@ -15,6 +15,12 @@ local function onUpdate()
     for i,v in ipairs(delayCallbacks) do
         if Time.time > v.time then
             v.cb()
+            if v.r == -1 then
+                table.insert(keep, v)
+            elseif v.r > 1 then
+                v.r = v.r - 1
+                table.insert(keep, v)
+            end
         else
             table.insert(keep, v)
         end
@@ -24,13 +30,15 @@ end
 
 
 -- @luadoc 在 Update 中延迟调用
--- @params delay double 延迟秒数量
--- @params cb function 回调函数
-function self.AfterFunc(delay, cb )
+-- @params delay double   延迟秒数量
+-- @params cb    function 回调函数
+-- @params r     int      重复次数
+function self.AfterFunc(delay, cb, r)
     if type(cb) ~= 'function' then return end
     delay = delay
+    r = r or 1
     if delay < 0 then delay = 0 end
-    table.insert(delayCallbacks, {cb=cb, time = Time.time + delay})
+    table.insert(delayCallbacks, {cb=cb, time = Time.time + delay, r = r})
 end
 
 -- @luadoc 增加 Update 回调

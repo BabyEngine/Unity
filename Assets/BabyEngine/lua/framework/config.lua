@@ -1,1 +1,0 @@
-BabyEngine.UpdateURL='http://babayengine.com/'
