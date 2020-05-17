@@ -25,9 +25,9 @@ function EventManager.AddListener( target, event, handler )
             evt.observers[obj] = obj
         end
         function evt.RemoveListener(target, handler)
-            for k,v in pairs(observers) do
-                if v.target == target and v.handler = handler then
-                    observers[k] = nil
+            for k,v in pairs(evt.observers) do
+                if v.target == target and v.handler == handler then
+                    evt.observers[k] = nil
                     return
                 end
             end
