@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -51,7 +52,7 @@ namespace BabyEngine {
             }
             return result;
         }
-        private ResourceData() {}
+        private ResourceData() { }
 
         public UnityWebRequest Download(string baseURL) {
             Debug.Log($"开始下载{Path}");
@@ -70,7 +71,7 @@ namespace BabyEngine {
                         var dir = System.IO.Path.GetDirectoryName(outPath);
                         Directory.CreateDirectory(dir);
                         File.WriteAllText(outPath, lsf.code);
-                        //Debug.Log($"install {outPath}");
+                        Debug.Log($"install {outPath}");
                     }
                 }
             } catch (Exception e) {
@@ -109,6 +110,12 @@ namespace BabyEngine {
             return $"action:{ActionName}";
         }
 
+        public string AssetbundleHASHKey {
+            get {
+                return Application.persistentDataPath + "/assets/" + this.Path;
+            }
+        }
+
         public void Save(byte[] data) {
             try {
                 // 写文件
@@ -120,13 +127,52 @@ namespace BabyEngine {
                 File.WriteAllBytes(filepath, data);
 
                 if (this.ActionName.Equals("lua") || this.ActionName.Equals("res")) {
-                    var key = filepath;
-                    //var key = filepath.Replace(Application.persistentDataPath + $"/assets/{GameConf.PlatformName}/", "");
+                    var key = AssetbundleHASHKey;
                     this.assetBundle = AssetBundleLoader.LoadFromMemory(key, data);
                 }
-            }catch(Exception e) {
+            } catch (Exception e) {
                 Debug.LogError(e);
             }
         }
+#if UNITY_ANDROID
+        IEnumerator LoadLocalData(Action<byte[]> cb) {
+            string filepath = System.IO.Path.Combine("jar:file://", Application.dataPath, "!/assets/", Path);
+            UnityWebRequest www = UnityWebRequest.Get(filepath);
+            yield return www.SendWebRequest();
+            cb(www.downloadHandler.data);
+        }
+        public void LoadLocal(MonoBehaviour mono) {
+            try {
+                mono.StartCoroutine(LoadLocalData((data) => {
+                    if (this.ActionName.Equals("lua") || this.ActionName.Equals("res")) {
+                        var key = AssetbundleHASHKey;
+                        this.assetBundle = AssetBundleLoader.LoadFromMemory(key, data);
+                    }
+                }));
+            } catch(Exception e) {
+                Debug.LogError(e);
+            }
+            
+        }
+#else
+        public void LoadLocal(MonoBehaviour mono) {
+            try {
+                // 写文件
+                string filepath = System.IO.Path.Combine(Application.streamingAssetsPath, Path);
+                var dir = System.IO.Path.GetDirectoryName(filepath);
+                if (!Directory.Exists(dir)) {
+                    Directory.CreateDirectory(dir);
+                }
+                var data = File.ReadAllBytes(filepath);
+                if (this.ActionName.Equals("lua") || this.ActionName.Equals("res")) {
+                    var key = AssetbundleHASHKey;
+                    this.assetBundle = AssetBundleLoader.LoadFromMemory(key, data);
+                }
+            } catch (Exception e) {
+                Debug.LogError(e);
+            }
+        }
+#endif
     }
+
 }

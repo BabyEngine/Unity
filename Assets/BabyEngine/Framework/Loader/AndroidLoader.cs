@@ -23,7 +23,7 @@ namespace BabyEngine {
             filename = filename.Replace(".", "/");
             var path = filepath + filename + ".lua";
             try {
-                Debug.Log($"{path}");
+                // Debug.Log($"Try load: {path}");
                 return File.ReadAllBytes(path);
             }catch(Exception e) {
                 if (e != null) { 

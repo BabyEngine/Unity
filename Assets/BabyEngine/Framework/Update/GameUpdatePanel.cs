@@ -14,7 +14,9 @@ namespace BabyEngine {
         GameUpdateState updateState = GameUpdateState.kChecking;
         public GameUpdateWorker worker;
         public Transform activeWhenGameReady;
+        public bool AutoDownload;
         public bool AutoStartGame;
+        public bool AllowNetworkErrorPlayLocal;
         private void Start() {
             worker.gameObject.SetActive(true);
             worker.CheckVersioning(onError, onLatestVersion, onFoundUpdateVersion);
@@ -29,7 +31,6 @@ namespace BabyEngine {
         public void OnClickedDownload() {
             ChangeState(GameUpdateState.kDownloading);
             worker.StartDownload(onDownloadFinished);
-
         }
 
         public void OnClickedStartGame() {
@@ -63,7 +64,6 @@ namespace BabyEngine {
         }
 
         private void onLatestVersion() {
-            Debug.Log("已经是最新版本");
             ChangeState(GameUpdateState.kIsLatest);
             if (AutoStartGame) {
                 DoStartGame();
@@ -71,9 +71,13 @@ namespace BabyEngine {
         }
 
         private void onError(string obj) {
-            Debug.LogError($"发生错误:{obj}");
+            Debug.LogWarning($"发生错误:{obj}");
             ChangeState(GameUpdateState.kError);
             ErrorText.text = obj;
+            if (AllowNetworkErrorPlayLocal) {
+                Debug.Log("允许本地游戏");
+                onLatestVersion();
+            }
         }
 
         public void ChangeState(GameUpdateState state) {
@@ -84,7 +88,7 @@ namespace BabyEngine {
             int idx = (int)updateState;
             if (idx < 0 || idx >= StateRoot.Length) {
                 // not in list
-                Debug.LogError($"idx error:{idx}");
+                //Debug.LogError($"idx error:{idx}");
             } else {
                 StateRoot[idx].gameObject.SetActive(true);
             }
@@ -92,6 +96,9 @@ namespace BabyEngine {
                 case GameUpdateState.kChecking:
                     break;
                 case GameUpdateState.kFoundNewVersion:
+                    if (AutoDownload) {
+                        OnClickedDownload();
+                    }
                     break;
                 case GameUpdateState.kIsLatest:
                     break;

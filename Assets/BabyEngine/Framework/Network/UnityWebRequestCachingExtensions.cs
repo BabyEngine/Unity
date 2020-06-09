@@ -323,7 +323,7 @@ namespace BabyEngine {
                 yield return true;
 
             if (www.isNetworkError) {
-                Debug.Log(": Error: " + www.error);
+                Debug.Log(": Error: " + www.error + "\n" + url);
                 cb((int)www.responseCode, www.GetResponseHeaders(), string.Empty);
                 yield break;
             }

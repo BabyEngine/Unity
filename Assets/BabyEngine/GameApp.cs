@@ -34,15 +34,6 @@ namespace BabyEngine {
             Invoke("RunLua", 0);
         }
 
-
-        //void onLuaStart(Action cb) {
-        //    if (Installer.IsInstall()) {
-        //        cb();
-        //    } else {
-        //        Installer.DoInstall(cb);
-        //    }
-        //}
-
         private void InitManager() {
             gameObject.AddComponent<ResourceManager>();
             gameObject.AddComponent<LooperManager>();
@@ -71,6 +62,10 @@ namespace BabyEngine {
                 $"  print(ret)" +
                 $"  BabyEngine.CallUpdateHelp() " +
                 $"end");
+        }
+
+        public void DoLuaString(string code) {
+            lua.DoString(code);
         }
     }
 }

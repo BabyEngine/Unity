@@ -100,7 +100,7 @@ namespace BabyEngine {
         }
         private ulong downloadedSize = 0;
         private UnityWebRequest www;
-        public IEnumerator Download(string BaseURL, Action<bool> cb) {
+        public IEnumerator Download(MonoBehaviour mono, string BaseURL, Action<bool> cb) {
             yield return null;
             downloadedSize = 0;
             foreach (var data in resourceDatas) {
@@ -115,11 +115,16 @@ namespace BabyEngine {
                     data.Save(www.downloadHandler.data);
                 }
             }
+            DoInstall(mono, () => { cb(true); });
+        }
+
+        public void DoInstall(MonoBehaviour mono, Action cb) {
             foreach (var data in resourceDatas) {
+                Debug.Log($"内建安装: {data.assetBundle}");
+                data.LoadLocal(mono);
                 data.Install();
-                yield return null;
             }
-            cb(true);
+            cb();
         }
     }
 }

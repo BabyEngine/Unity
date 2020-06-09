@@ -11,12 +11,8 @@ namespace BabyEngine {
     /// </summary>
     public class GameUpdateWorker : MonoBehaviour {
         [SerializeField] private string baseURL  = string.Empty;
-
         private string BASEURL {
             get {
-                if (Application.platform == RuntimePlatform.WindowsEditor) {
-                    return "standalonewindows";
-                }
                 return baseURL + $"/{Application.platform.ToString().ToLower()}";
             }
         }
@@ -32,9 +28,18 @@ namespace BabyEngine {
             Action onLatestVersion, 
             Action onFoundUpdateVersion,
             bool ignoreVersionNumber=false) {
-            StartCoroutine(CheckStartup(onErr, onLatestVersion, onFoundUpdateVersion, ignoreVersionNumber));
+            // 检查本地是否有展开
+            if (IsNeedExtractBuiltin()) {
+                Debug.Log("需要解压内建包");
+                ExtractBuiltinPackage(() => {
+                    StartCoroutine(CheckStartup(onErr, onLatestVersion, onFoundUpdateVersion, ignoreVersionNumber));
+                });
+            } else {
+                Debug.Log("检查更新");
+                StartCoroutine(CheckStartup(onErr, onLatestVersion, onFoundUpdateVersion, ignoreVersionNumber));
+            }
         }
-         
+        
         private IEnumerator CheckStartup(Action<string> onErr, 
             Action onLatestVersion, 
             Action onFoundUpdateVersion,
@@ -53,11 +58,43 @@ namespace BabyEngine {
                         break;
                     default:  // not respect this
                         onErr($"发生错误, HTTP_STATUS: {statusCode}");
-                        Debug.LogError($"发生错误, HTTP_STATUS: {statusCode} {BASEURL}");
+                        //Debug.LogError($"发生错误, HTTP_STATUS: {statusCode} {BASEURL}");
                         break;
                 }
             });
             StartCoroutine(co);
+        }
+        
+        public bool IsNeedExtractBuiltin() {
+#if UNITY_ANDROID
+            string path = Path.Combine("jar:file://", Application.dataPath, "!/assets/", "update.txt");
+#else
+            string path = Path.Combine(Application.streamingAssetsPath, "update.txt");
+#endif
+
+            if (!File.Exists(path)) {
+                return false;
+            }
+            path = Path.Combine(Application.persistentDataPath, "update.txt");
+            if (File.Exists(path)) { // 已经解压了
+                return true;
+            }
+            return false;
+        }
+        public void ExtractBuiltinPackage(Action onFinished) {
+#if UNITY_ANDROID
+            string path = Path.Combine("jar:file://" , Application.dataPath, "!/assets/", "update.txt");
+#else
+            string path = Path.Combine(Application.streamingAssetsPath, "update.txt");
+#endif
+            if (!File.Exists(path)) {
+                return;
+            }
+            var content = File.ReadAllText(path);
+            webData = content;
+            ParseStartupData(null, ()=>{
+                currentDownloadVersioning.DoInstall(this, onFinished);
+            }, false);
         }
         
         private void ParseStartupData(Action onLatestVersion, Action onFoundUpdateVersion, bool ignoreVersionNumber) {
@@ -101,7 +138,7 @@ namespace BabyEngine {
                 return;
             }
             
-            StartCoroutine(currentDownloadVersioning.Download(BASEURL, (ok) => {
+            StartCoroutine(currentDownloadVersioning.Download(this, BASEURL, (ok) => {
                 if (ok) { // 如果都下载成功了 就保存版本信息
                     string locPath = $"{Application.persistentDataPath}/update.txt";
                     File.WriteAllText(locPath, webData);
