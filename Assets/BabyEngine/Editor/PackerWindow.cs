@@ -116,7 +116,7 @@ namespace BabyEngine {
             }
             EditorPrefs.SetInt(KEY_LAST_VERSION, versionNumber);
             EditorPrefs.GetString(KEY_LAST_GAMENAME, subGame);
-            Packer.BuildAll(target, subGame, versionNumber, enableLUAC);
+            Packer.BuildAll(target, subGame);
         }
     }
 }
