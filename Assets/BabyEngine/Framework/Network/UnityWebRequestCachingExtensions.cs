@@ -36,6 +36,7 @@ namespace BabyEngine {
             if (etag != null) {
                 www.SetRequestHeader("If-None-Match", etag);
             }
+            
             www.downloadHandler = handler;
             return handler;
         }
@@ -47,7 +48,7 @@ namespace BabyEngine {
                 return; 
             }
 
-            mo.StartCoroutine(CacheableDownloadHandler.GetTexture2D(url, CacheOption.kCacheTemporary, (code, header, tex) => {
+            mo.StartCoroutine(CacheableDownloadHandler.GetTexture2D(url, CacheOption.kCacheTemporary, ( code, header, tex ) => {
                 if (code == 200 || code == 304) {
                     image.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.one / 2.0f);
                 } else {
@@ -55,13 +56,43 @@ namespace BabyEngine {
                 }
             }));
         }
-      
-        public static void Run(this IEnumerator co, MonoBehaviour mono) {
+
+        public static void Run( this IEnumerator co, MonoBehaviour mono ) {
             if (mono != null) {
                 mono.StartCoroutine(co);
             } else {
                 Debug.LogError("error");
             }
+        }
+
+        public static void DownloadBytes( this GameObject gameObject, string url, CacheOption cache, Action<int, Dictionary<string, string>, byte[]> cb ) {
+            var mo = gameObject.GetComponent<MonoBehaviour>();
+            if (mo == null) {
+                mo = gameObject.AddComponent<DummyMonoBehaviour>();
+            }
+            if (!mo.gameObject.activeInHierarchy) {
+                Debug.LogWarning("object not active");
+                cb(-1, null, null);
+                return;
+            }
+            mo.StartCoroutine(CacheableDownloadHandler.GetBytes(url, cache, ( code, header, data ) => {
+                cb(code, header, data);
+            }));
+        }
+
+        public static void HTTPPostJsonText(this GameObject gameObject, string url, string data, Action<int, Dictionary<string, string>, string> cb) {
+            var mo = gameObject.GetComponent<MonoBehaviour>();
+            if (mo == null) {
+                mo = gameObject.AddComponent<DummyMonoBehaviour>();
+            }
+            if (!mo.gameObject.activeInHierarchy) {
+                Debug.LogWarning("object not active");
+                cb(-1, null, null);
+                return;
+            }
+            mo.StartCoroutine(CacheableDownloadHandler.PostJsonText(url, data,  (code, header, responseData) => {
+                cb(code, header, responseData);
+            }));
         }
     }
 
@@ -213,8 +244,13 @@ namespace BabyEngine {
                         mBuffer = LoadCache(url);
                         break;
                     case 200: // 数据有变化, 用服务器下发数据覆盖本地缓存
-                        mBuffer = mStream.GetBuffer();
-                        SaveCache(mWebRequest.GetResponseHeader("Etag"), mBuffer);
+                        //mBuffer = mStream.GetBuffer();
+                        var sz = Convert.ToInt32(mWebRequest.GetResponseHeader("Content-Length"));
+                        if (sz > 0) {
+                            mBuffer = new byte[sz];
+                            Buffer.BlockCopy(mStream.GetBuffer(), 0, mBuffer, 0, sz);
+                            SaveCache(mWebRequest.GetResponseHeader("Etag"), mBuffer);
+                        }
                         break;
                     default:
                         mBuffer = mStream.GetBuffer();
@@ -284,13 +320,13 @@ namespace BabyEngine {
                 yield return true;
             
             if (www.isNetworkError) {
-                Debug.Log(": Error: " + www.error);
+                Debug.Log("GetTexture2D Error: " + www.error);
                 cb(-1, null, null);
                 yield break;
             }
 
             if (www.isHttpError) {
-                Debug.Log(": Error: " + www.error);
+                Debug.Log("GetTexture2D Error: " + www.error);
                 cb((int)www.responseCode, www.GetResponseHeaders(), null);
                 yield break;
             }
@@ -308,8 +344,14 @@ namespace BabyEngine {
                 yield return true;
           
             if (www.isNetworkError) {
-                Debug.Log(": Error: " + www.error);
-                cb((int)www.responseCode, www.GetResponseHeaders(), null);
+                Debug.Log("GetBytes Error: " + www.error);
+                var headers = www.GetResponseHeaders();
+                if(headers !=null) {
+                    foreach(var h in headers) {
+                        Debug.Log($"headers:{h.Key} {h.Value}");
+                    }
+                }
+                cb((int)www.responseCode, headers, null);
                 yield break;
             }
             cb((int)www.responseCode, www.GetResponseHeaders(), www.downloadHandler.data);
@@ -323,11 +365,34 @@ namespace BabyEngine {
                 yield return true;
 
             if (www.isNetworkError) {
-                Debug.Log(": Error: " + www.error + "\n" + url);
+                Debug.Log("GetText Error: " + www.error + "\n" + url);
                 cb((int)www.responseCode, www.GetResponseHeaders(), string.Empty);
                 yield break;
             }
             cb((int)www.responseCode, www.GetResponseHeaders(), www.downloadHandler.text);
+        }
+
+        public static IEnumerator PostJsonText(string url, string data, Action<int, Dictionary<string, string>, string> cb) {
+            UnityWebRequest www = new UnityWebRequest(url);
+            www.method = UnityWebRequest.kHttpVerbPOST;
+            var uh = new UploadHandlerRaw(Encoding.UTF8.GetBytes(data));
+            uh.contentType = "application/json";
+            www.uploadHandler = uh;
+            www.downloadHandler = new DownloadHandlerBuffer();
+            yield return www.SendWebRequest();
+            while (!www.isDone)
+                yield return true;
+
+            if (www.isNetworkError) {
+                Debug.Log("PostJsonText Error: " + www.error + "\n" + url);
+                cb((int)www.responseCode, www.GetResponseHeaders(), string.Empty);
+                yield break;
+            }
+            string body=string.Empty;
+            if (www.downloadHandler != null) {
+                body = www.downloadHandler.text;
+            }
+            cb((int)www.responseCode, www.GetResponseHeaders(), body);
         }
 
         public static IEnumerator GetAssetBundle(string url, CacheOption option, Action<int, Dictionary<string, string>, AssetBundle, string> cb) {
@@ -339,7 +404,7 @@ namespace BabyEngine {
                 yield return true;
 
             if (www.isNetworkError) {
-                Debug.Log(": Error: " + www.error);
+                Debug.Log("GetAssetBundle Error: " + www.error);
                 cb((int)www.responseCode, www.GetResponseHeaders(), null, string.Empty);
                 yield break;
             }

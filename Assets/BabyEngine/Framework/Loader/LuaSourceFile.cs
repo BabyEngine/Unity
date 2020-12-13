@@ -5,7 +5,7 @@ using UnityEngine;
 
 [Serializable]
 public class LuaSourceFile {
-    public string code;
+    public byte[] code;
     public string OutFile;
 
     public override string ToString() {

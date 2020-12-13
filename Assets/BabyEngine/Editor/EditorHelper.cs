@@ -2,7 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEditor;
+using UnityEditor.Experimental.SceneManagement;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace BabyEngine {
@@ -16,7 +19,9 @@ namespace BabyEngine {
 
         [MenuItem("Tools/截图")]
         public static void CaptureScreen() {
-            ScreenCapture.CaptureScreenshot("截图-" + DateTime.Now + ".png");
+            var path = "截图-" + DateTime.Now.ToString("yyyy-MM-dd_hh-mm-ss_FFF") + ".png";
+            Debug.Log(path);
+            ScreenCapture.CaptureScreenshot(path);
         }
         #region create lua file
         [MenuItem("Assets/Create/new.lua")]
@@ -86,5 +91,39 @@ namespace BabyEngine {
             }
         }
         #endregion
+
+
+        [MenuItem("GameObject/BabyEngine/C-数字重命名子节点", priority = -99)]
+        public static void RenameChildByNumber() {
+            if (Selection.gameObjects.Length == 0) {
+                return;
+            }
+            Transform t = Selection.gameObjects[0].transform;
+            int idx = 1;
+            foreach (Transform tra in t) {
+                tra.name = (idx++).ToString();
+            }
+            var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (prefabStage != null) {
+                EditorSceneManager.MarkSceneDirty(prefabStage.scene);
+            }
+        }
+
+        [MenuItem("GameObject/BabyEngine/D-复制子节点节点位置", priority = -98)]
+        public static void CopySelectionObjectPosition() {
+            if (Selection.gameObjects.Length == 0) {
+                return;
+            }
+            var transform = Selection.gameObjects[0].transform;
+            StringBuilder sb = new StringBuilder();
+            foreach (Transform tra in transform) {
+                var pos = tra.position;
+                sb.AppendFormat("{{ {0}, {1}, {2} }},", pos.x, pos.y, pos.z);
+            }
+            TextEditor te = new TextEditor();
+            te.text = sb.ToString();
+            te.SelectAll();
+            te.Copy();
+        }
     }
 }

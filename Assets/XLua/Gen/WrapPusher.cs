@@ -34,6 +34,8 @@ namespace XLua
 				translator.RegisterPushAndGetAndUpdate<UnityEngine.Ray>(translator.PushUnityEngineRay, translator.Get, translator.UpdateUnityEngineRay);
 				translator.RegisterPushAndGetAndUpdate<UnityEngine.Bounds>(translator.PushUnityEngineBounds, translator.Get, translator.UpdateUnityEngineBounds);
 				translator.RegisterPushAndGetAndUpdate<UnityEngine.Ray2D>(translator.PushUnityEngineRay2D, translator.Get, translator.UpdateUnityEngineRay2D);
+				translator.RegisterPushAndGetAndUpdate<UnityEngine.TextureFormat>(translator.PushUnityEngineTextureFormat, translator.Get, translator.UpdateUnityEngineTextureFormat);
+				translator.RegisterPushAndGetAndUpdate<UnityEngine.KeyCode>(translator.PushUnityEngineKeyCode, translator.Get, translator.UpdateUnityEngineKeyCode);
 				translator.RegisterPushAndGetAndUpdate<DG.Tweening.AutoPlay>(translator.PushDGTweeningAutoPlay, translator.Get, translator.UpdateDGTweeningAutoPlay);
 				translator.RegisterPushAndGetAndUpdate<DG.Tweening.AxisConstraint>(translator.PushDGTweeningAxisConstraint, translator.Get, translator.UpdateDGTweeningAxisConstraint);
 				translator.RegisterPushAndGetAndUpdate<DG.Tweening.Ease>(translator.PushDGTweeningEase, translator.Get, translator.UpdateDGTweeningEase);
@@ -572,6 +574,174 @@ namespace XLua
                 if (!CopyByValue.Pack(buff, 0,  val))
                 {
                     throw new Exception("pack fail for UnityEngine.Ray2D ,value="+val);
+                }
+            }
+			
+            else
+            {
+                throw new Exception("try to update a data with lua type:" + LuaAPI.lua_type(L, index));
+            }
+        }
+        
+        int UnityEngineTextureFormat_TypeID = -1;
+		int UnityEngineTextureFormat_EnumRef = -1;
+        
+        public void PushUnityEngineTextureFormat(RealStatePtr L, UnityEngine.TextureFormat val)
+        {
+            if (UnityEngineTextureFormat_TypeID == -1)
+            {
+			    bool is_first;
+                UnityEngineTextureFormat_TypeID = getTypeId(L, typeof(UnityEngine.TextureFormat), out is_first);
+				
+				if (UnityEngineTextureFormat_EnumRef == -1)
+				{
+				    Utils.LoadCSTable(L, typeof(UnityEngine.TextureFormat));
+				    UnityEngineTextureFormat_EnumRef = LuaAPI.luaL_ref(L, LuaIndexes.LUA_REGISTRYINDEX);
+				}
+				
+            }
+			
+			if (LuaAPI.xlua_tryget_cachedud(L, (int)val, UnityEngineTextureFormat_EnumRef) == 1)
+            {
+			    return;
+			}
+			
+            IntPtr buff = LuaAPI.xlua_pushstruct(L, 4, UnityEngineTextureFormat_TypeID);
+            if (!CopyByValue.Pack(buff, 0, (int)val))
+            {
+                throw new Exception("pack fail fail for UnityEngine.TextureFormat ,value="+val);
+            }
+			
+			LuaAPI.lua_getref(L, UnityEngineTextureFormat_EnumRef);
+			LuaAPI.lua_pushvalue(L, -2);
+			LuaAPI.xlua_rawseti(L, -2, (int)val);
+			LuaAPI.lua_pop(L, 1);
+			
+        }
+		
+        public void Get(RealStatePtr L, int index, out UnityEngine.TextureFormat val)
+        {
+		    LuaTypes type = LuaAPI.lua_type(L, index);
+            if (type == LuaTypes.LUA_TUSERDATA )
+            {
+			    if (LuaAPI.xlua_gettypeid(L, index) != UnityEngineTextureFormat_TypeID)
+				{
+				    throw new Exception("invalid userdata for UnityEngine.TextureFormat");
+				}
+				
+                IntPtr buff = LuaAPI.lua_touserdata(L, index);
+				int e;
+                if (!CopyByValue.UnPack(buff, 0, out e))
+                {
+                    throw new Exception("unpack fail for UnityEngine.TextureFormat");
+                }
+				val = (UnityEngine.TextureFormat)e;
+                
+            }
+            else
+            {
+                val = (UnityEngine.TextureFormat)objectCasters.GetCaster(typeof(UnityEngine.TextureFormat))(L, index, null);
+            }
+        }
+		
+        public void UpdateUnityEngineTextureFormat(RealStatePtr L, int index, UnityEngine.TextureFormat val)
+        {
+		    
+            if (LuaAPI.lua_type(L, index) == LuaTypes.LUA_TUSERDATA)
+            {
+			    if (LuaAPI.xlua_gettypeid(L, index) != UnityEngineTextureFormat_TypeID)
+				{
+				    throw new Exception("invalid userdata for UnityEngine.TextureFormat");
+				}
+				
+                IntPtr buff = LuaAPI.lua_touserdata(L, index);
+                if (!CopyByValue.Pack(buff, 0,  (int)val))
+                {
+                    throw new Exception("pack fail for UnityEngine.TextureFormat ,value="+val);
+                }
+            }
+			
+            else
+            {
+                throw new Exception("try to update a data with lua type:" + LuaAPI.lua_type(L, index));
+            }
+        }
+        
+        int UnityEngineKeyCode_TypeID = -1;
+		int UnityEngineKeyCode_EnumRef = -1;
+        
+        public void PushUnityEngineKeyCode(RealStatePtr L, UnityEngine.KeyCode val)
+        {
+            if (UnityEngineKeyCode_TypeID == -1)
+            {
+			    bool is_first;
+                UnityEngineKeyCode_TypeID = getTypeId(L, typeof(UnityEngine.KeyCode), out is_first);
+				
+				if (UnityEngineKeyCode_EnumRef == -1)
+				{
+				    Utils.LoadCSTable(L, typeof(UnityEngine.KeyCode));
+				    UnityEngineKeyCode_EnumRef = LuaAPI.luaL_ref(L, LuaIndexes.LUA_REGISTRYINDEX);
+				}
+				
+            }
+			
+			if (LuaAPI.xlua_tryget_cachedud(L, (int)val, UnityEngineKeyCode_EnumRef) == 1)
+            {
+			    return;
+			}
+			
+            IntPtr buff = LuaAPI.xlua_pushstruct(L, 4, UnityEngineKeyCode_TypeID);
+            if (!CopyByValue.Pack(buff, 0, (int)val))
+            {
+                throw new Exception("pack fail fail for UnityEngine.KeyCode ,value="+val);
+            }
+			
+			LuaAPI.lua_getref(L, UnityEngineKeyCode_EnumRef);
+			LuaAPI.lua_pushvalue(L, -2);
+			LuaAPI.xlua_rawseti(L, -2, (int)val);
+			LuaAPI.lua_pop(L, 1);
+			
+        }
+		
+        public void Get(RealStatePtr L, int index, out UnityEngine.KeyCode val)
+        {
+		    LuaTypes type = LuaAPI.lua_type(L, index);
+            if (type == LuaTypes.LUA_TUSERDATA )
+            {
+			    if (LuaAPI.xlua_gettypeid(L, index) != UnityEngineKeyCode_TypeID)
+				{
+				    throw new Exception("invalid userdata for UnityEngine.KeyCode");
+				}
+				
+                IntPtr buff = LuaAPI.lua_touserdata(L, index);
+				int e;
+                if (!CopyByValue.UnPack(buff, 0, out e))
+                {
+                    throw new Exception("unpack fail for UnityEngine.KeyCode");
+                }
+				val = (UnityEngine.KeyCode)e;
+                
+            }
+            else
+            {
+                val = (UnityEngine.KeyCode)objectCasters.GetCaster(typeof(UnityEngine.KeyCode))(L, index, null);
+            }
+        }
+		
+        public void UpdateUnityEngineKeyCode(RealStatePtr L, int index, UnityEngine.KeyCode val)
+        {
+		    
+            if (LuaAPI.lua_type(L, index) == LuaTypes.LUA_TUSERDATA)
+            {
+			    if (LuaAPI.xlua_gettypeid(L, index) != UnityEngineKeyCode_TypeID)
+				{
+				    throw new Exception("invalid userdata for UnityEngine.KeyCode");
+				}
+				
+                IntPtr buff = LuaAPI.lua_touserdata(L, index);
+                if (!CopyByValue.Pack(buff, 0,  (int)val))
+                {
+                    throw new Exception("pack fail for UnityEngine.KeyCode ,value="+val);
                 }
             }
 			
@@ -1564,6 +1734,18 @@ namespace XLua
 				translator.PushUnityEngineRay2D(L, array[index]);
 				return true;
 			}
+			else if (type == typeof(UnityEngine.TextureFormat[]))
+			{
+			    UnityEngine.TextureFormat[] array = obj as UnityEngine.TextureFormat[];
+				translator.PushUnityEngineTextureFormat(L, array[index]);
+				return true;
+			}
+			else if (type == typeof(UnityEngine.KeyCode[]))
+			{
+			    UnityEngine.KeyCode[] array = obj as UnityEngine.KeyCode[];
+				translator.PushUnityEngineKeyCode(L, array[index]);
+				return true;
+			}
 			else if (type == typeof(DG.Tweening.AutoPlay[]))
 			{
 			    DG.Tweening.AutoPlay[] array = obj as DG.Tweening.AutoPlay[];
@@ -1681,6 +1863,18 @@ namespace XLua
 			else if (type == typeof(UnityEngine.Ray2D[]))
 			{
 			    UnityEngine.Ray2D[] array = obj as UnityEngine.Ray2D[];
+				translator.Get(L, obj_idx, out array[array_idx]);
+				return true;
+			}
+			else if (type == typeof(UnityEngine.TextureFormat[]))
+			{
+			    UnityEngine.TextureFormat[] array = obj as UnityEngine.TextureFormat[];
+				translator.Get(L, obj_idx, out array[array_idx]);
+				return true;
+			}
+			else if (type == typeof(UnityEngine.KeyCode[]))
+			{
+			    UnityEngine.KeyCode[] array = obj as UnityEngine.KeyCode[];
 				translator.Get(L, obj_idx, out array[array_idx]);
 				return true;
 			}

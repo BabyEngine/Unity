@@ -1054,7 +1054,9 @@ namespace XLua.CSObjectWrap
                 DG.Tweening.Tweener gen_to_be_invoked = (DG.Tweening.Tweener)translator.FastGetCSObj(L, 1);
             
             
-                
+			    int gen_param_count = LuaAPI.lua_gettop(L);
+            
+                if(gen_param_count == 2&& LuaTypes.LUA_TNUMBER == LuaAPI.lua_type(L, 2)) 
                 {
                     float _delay = (float)LuaAPI.lua_tonumber(L, 2);
                     
@@ -1065,10 +1067,24 @@ namespace XLua.CSObjectWrap
                     
                     return 1;
                 }
+                if(gen_param_count == 3&& LuaTypes.LUA_TNUMBER == LuaAPI.lua_type(L, 2)&& LuaTypes.LUA_TBOOLEAN == LuaAPI.lua_type(L, 3)) 
+                {
+                    float _delay = (float)LuaAPI.lua_tonumber(L, 2);
+                    bool _asPrependedIntervalIfSequence = LuaAPI.lua_toboolean(L, 3);
+                    
+                        DG.Tweening.Tween gen_ret = gen_to_be_invoked.SetDelay( _delay, _asPrependedIntervalIfSequence );
+                        translator.Push(L, gen_ret);
+                    
+                    
+                    
+                    return 1;
+                }
                 
             } catch(System.Exception gen_e) {
                 return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
             }
+            
+            return LuaAPI.luaL_error(L, "invalid arguments to DG.Tweening.Tweener.SetDelay!");
             
         }
         

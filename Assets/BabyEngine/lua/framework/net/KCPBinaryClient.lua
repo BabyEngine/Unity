@@ -6,6 +6,27 @@ local stateClosed       = 3 -- 连接主动关闭
 local stateLost         = 4 -- 连接丢失
 local stateTimeout      = 5 -- 开始连接的超时
 
+local NetworkStatus = {}
+setmetatable(NetworkStatus, NetworkStatus)
+local stateMap = {
+    [1] = 'Init',
+    [2] = 'Connecting',
+    [3] = 'Connected',
+    [4] = 'Closed',
+    [5] = 'Lost',
+    [6] = 'Timeout',
+}
+function NetworkStatus.__call(t, val)
+    local o = setmetatable({}, NetworkStatus)
+    o.state = val
+    return o
+end
+
+function NetworkStatus.__tostring(t)
+    return stateMap[t.state] or 'Unknow State'
+end
+
+
 -- time stuff
 local lostTimeout  = 10 -- 超过这个时间没收到消息, 认为链路丢失
 local pingInterval = 5  -- 间隔n秒向服务器发送ping指令, 用以保活
@@ -17,10 +38,9 @@ function net.NewKCPBinaryClient(address, port)
         latency  = 0,
         startPingTime = 0
     }
-
-    local go = CS.UnityEngine.GameObject()
-    go.name = "KCPClient"
-    local kcp = go:AddComponent(typeof(CS.uKCP.KCPClient))
+    local originAddress = address
+    local originPort    = port
+    local kcp = CS.uKCP.KCPClient()
     local p = net.NewBinaryProtocol()
     local lastSeen = Time.time
     local hasConnected = false
@@ -29,7 +49,7 @@ function net.NewKCPBinaryClient(address, port)
     local sendPing
     local reqId = 0
     local reqMap = {}
-
+    self.networkChangeListener = NewListener()
     -- 消息处理
     local function onMsgOpen(msgType, msg)
         if self.OnOpen then
@@ -53,6 +73,7 @@ function net.NewKCPBinaryClient(address, port)
             address = tokens[1]
             port = tonumber(tokens[2])
             print('切换地址', address, port)
+            hasConnected = false
             self.Connect()
         end
     end
@@ -84,6 +105,7 @@ function net.NewKCPBinaryClient(address, port)
     end
 
     kcp.OnError = function(err)
+        hasConnected = false
         if self.OnError then
             self.OnError(err)
         end
@@ -94,6 +116,7 @@ function net.NewKCPBinaryClient(address, port)
     end
 
     kcp.OnOpen = function()
+        -- isConnect = true
         -- if self.OnOpen then
         --     self.OnOpen()
         -- end
@@ -101,24 +124,39 @@ function net.NewKCPBinaryClient(address, port)
 
     function self.changeState(newState)
         if self.state == newState then return end
+        local oldState = self.state
         self.state = newState
-        print('状态改变', newState)
+        -- print('状态改变', newState)
         if newState == stateLost then
             Looper.AfterFunc(2, self.Connect)
         end
 
         if newState == stateTimeout then
-            print('自动重试')
+            address = originAddress
+            port    = originPort
             Looper.AfterFunc(2, self.Connect)
         end
+        -- self.networkChangeListener.Call(oldState, newState)
+        self.networkChangeListener.Call(NetworkStatus(oldState), NetworkStatus(newState))
     end
+
 
     function self.Release()
+        kcp:Close()
         Looper.RemoveUpdate(self.Update)
-        CS.UnityEngine.GameObject.Destroy(go)
     end
-
+    function self.CheckConnection()
+        if Time.time - lastSeen > lostTimeout then
+            print('网络超时...')
+            self.changeState(stateLost)
+            hasConnected = false
+            return
+        end
+    end
     function self.Update()
+        if kcp then
+            kcp:Update()
+        end
         if self.state == stateConnecting then -- 正在连接中, 检查连接超时
             if Time.time - startConnectTime > 10 then
                 self.changeState(stateTimeout)
@@ -127,10 +165,7 @@ function net.NewKCPBinaryClient(address, port)
         end
         if self.state == stateConnected then -- 已经连接上
             -- 检查上一次消息
-            if Time.time - lastSeen > lostTimeout then
-                self.changeState(stateLost)
-                return
-            end
+            self.CheckConnection()
             -- 需要定时发送ping, keepalive
             if Time.time - self.lastPingTime >= pingInterval then
                 self.lastPingTime = Time.time
@@ -143,6 +178,7 @@ function net.NewKCPBinaryClient(address, port)
         if self.state == stateConnected then -- 先主动放弃先前的链路
             self.SendNoop()
         end
+        if hasConnected then return end
 
         if not hasUpdateRepeat then
             -- 如果连接时发现没有 update 回调,
@@ -158,12 +194,14 @@ function net.NewKCPBinaryClient(address, port)
     end
 
     function self.Send( data )
+        self.CheckConnection()
         p.Write(4, data, function(bin)
             kcp:Send(bin)
         end)
     end
     -- 主动断开
     function self.SendNoop()
+        self.CheckConnection()
         p.Write(6, nil, function(bin)
             kcp:Send(bin)
         end)
@@ -173,6 +211,7 @@ function net.NewKCPBinaryClient(address, port)
     end
 
     function self.Request( data, cb )
+        self.CheckConnection()
         local id = reqId
         reqMap[id] = {
             cb = cb,

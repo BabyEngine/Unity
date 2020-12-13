@@ -11,29 +11,34 @@ using UnityEditor;
 #endif
 
 namespace BabyEngine {
-    public class LooperManager : MonoBehaviour {
-        public static LooperManager Instance;
-        public static LooperManager Get() {
-            return Instance;
-        }
-
-        private void Awake() {
-            Instance = this;
-        }
+    public class LooperManager : IManager {
+        object mLock = new object();
         public LuaFunction OnGUIFunc;
         public LuaFunction UpdateFunc;
         public LuaFunction FixedUpdateFunc;
         public LuaFunction LateUpdateFunc;
-
+        private List<Action> actions = new List<Action>();
         private void OnGUI() {
             if (OnGUIFunc != null) {
                 OnGUIFunc.Call();
             }
         }
-
         private void Update() {
             if(UpdateFunc != null) {
                 UpdateFunc.Call();
+            }
+            List<Action> runningActions = new List<Action>();
+            lock(mLock) {
+                runningActions.AddRange(actions);
+                actions.Clear();
+            }
+
+            foreach(var act in runningActions) {
+                try {
+                    act?.Invoke();
+                }catch(Exception e) {
+                    Debug.LogError(e);
+                }
             }
         }
 
@@ -45,6 +50,21 @@ namespace BabyEngine {
         private void LateUpdate() {
             if (LateUpdateFunc != null) {
                 LateUpdateFunc.Call();
+            }
+        }
+
+        public void RunOnMainThread(Action act) {
+            lock (mLock) {
+                actions.Add(act);
+            }
+        }
+        public void RunCoroutineOnMainThread(object obj) {
+            IEnumerator co = obj as IEnumerator;
+            if (co == null) { return; }
+            lock (mLock) {
+                actions.Add(()=> {
+                    StartCoroutine(co);
+                });
             }
         }
     }

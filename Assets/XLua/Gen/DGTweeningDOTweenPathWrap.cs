@@ -21,9 +21,11 @@ namespace XLua.CSObjectWrap
         {
 			ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
 			System.Type type = typeof(DG.Tweening.DOTweenPath);
-			Utils.BeginObjectRegister(type, L, translator, 0, 11, 39, 39);
+			Utils.BeginObjectRegister(type, L, translator, 0, 13, 39, 39);
 			
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "DOPlay", _m_DOPlay);
+			Utils.RegisterFunc(L, Utils.METHOD_IDX, "DOPlayById", _m_DOPlayById);
+			Utils.RegisterFunc(L, Utils.METHOD_IDX, "DOPlayAllById", _m_DOPlayAllById);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "DOPlayBackwards", _m_DOPlayBackwards);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "DOPlayForward", _m_DOPlayForward);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "DOPause", _m_DOPause);
@@ -176,6 +178,62 @@ namespace XLua.CSObjectWrap
                 {
                     
                     gen_to_be_invoked.DOPlay(  );
+                    
+                    
+                    
+                    return 0;
+                }
+                
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _m_DOPlayById(RealStatePtr L)
+        {
+		    try {
+            
+                ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
+            
+            
+                DG.Tweening.DOTweenPath gen_to_be_invoked = (DG.Tweening.DOTweenPath)translator.FastGetCSObj(L, 1);
+            
+            
+                
+                {
+                    string _id = LuaAPI.lua_tostring(L, 2);
+                    
+                    gen_to_be_invoked.DOPlayById( _id );
+                    
+                    
+                    
+                    return 0;
+                }
+                
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _m_DOPlayAllById(RealStatePtr L)
+        {
+		    try {
+            
+                ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
+            
+            
+                DG.Tweening.DOTweenPath gen_to_be_invoked = (DG.Tweening.DOTweenPath)translator.FastGetCSObj(L, 1);
+            
+            
+                
+                {
+                    string _id = LuaAPI.lua_tostring(L, 2);
+                    
+                    gen_to_be_invoked.DOPlayAllById( _id );
                     
                     
                     

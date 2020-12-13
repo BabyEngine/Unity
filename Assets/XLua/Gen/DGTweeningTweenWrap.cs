@@ -21,7 +21,7 @@ namespace XLua.CSObjectWrap
         {
 			ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
 			System.Type type = typeof(DG.Tweening.Tween);
-			Utils.BeginObjectRegister(type, L, translator, 0, 57, 21, 17);
+			Utils.BeginObjectRegister(type, L, translator, 0, 58, 23, 18);
 			
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "Complete", _m_Complete);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "Flip", _m_Flip);
@@ -45,6 +45,7 @@ namespace XLua.CSObjectWrap
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "WaitForStart", _m_WaitForStart);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "CompletedLoops", _m_CompletedLoops);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "Delay", _m_Delay);
+			Utils.RegisterFunc(L, Utils.METHOD_IDX, "ElapsedDelay", _m_ElapsedDelay);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "Duration", _m_Duration);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "Elapsed", _m_Elapsed);
 			Utils.RegisterFunc(L, Utils.METHOD_IDX, "ElapsedPercentage", _m_ElapsedPercentage);
@@ -85,6 +86,7 @@ namespace XLua.CSObjectWrap
 			Utils.RegisterFunc(L, Utils.GETTER_IDX, "isRelative", _g_get_isRelative);
             Utils.RegisterFunc(L, Utils.GETTER_IDX, "active", _g_get_active);
             Utils.RegisterFunc(L, Utils.GETTER_IDX, "fullPosition", _g_get_fullPosition);
+            Utils.RegisterFunc(L, Utils.GETTER_IDX, "hasLoops", _g_get_hasLoops);
             Utils.RegisterFunc(L, Utils.GETTER_IDX, "playedOnce", _g_get_playedOnce);
             Utils.RegisterFunc(L, Utils.GETTER_IDX, "position", _g_get_position);
             Utils.RegisterFunc(L, Utils.GETTER_IDX, "timeScale", _g_get_timeScale);
@@ -103,6 +105,7 @@ namespace XLua.CSObjectWrap
             Utils.RegisterFunc(L, Utils.GETTER_IDX, "onWaypointChange", _g_get_onWaypointChange);
             Utils.RegisterFunc(L, Utils.GETTER_IDX, "easeOvershootOrAmplitude", _g_get_easeOvershootOrAmplitude);
             Utils.RegisterFunc(L, Utils.GETTER_IDX, "easePeriod", _g_get_easePeriod);
+            Utils.RegisterFunc(L, Utils.GETTER_IDX, "debugTargetId", _g_get_debugTargetId);
             
 			Utils.RegisterFunc(L, Utils.SETTER_IDX, "fullPosition", _s_set_fullPosition);
             Utils.RegisterFunc(L, Utils.SETTER_IDX, "timeScale", _s_set_timeScale);
@@ -121,6 +124,7 @@ namespace XLua.CSObjectWrap
             Utils.RegisterFunc(L, Utils.SETTER_IDX, "onWaypointChange", _s_set_onWaypointChange);
             Utils.RegisterFunc(L, Utils.SETTER_IDX, "easeOvershootOrAmplitude", _s_set_easeOvershootOrAmplitude);
             Utils.RegisterFunc(L, Utils.SETTER_IDX, "easePeriod", _s_set_easePeriod);
+            Utils.RegisterFunc(L, Utils.SETTER_IDX, "debugTargetId", _s_set_debugTargetId);
             
 			
 			Utils.EndObjectRegister(type, L, translator, null, null,
@@ -841,6 +845,34 @@ namespace XLua.CSObjectWrap
                 {
                     
                         float gen_ret = gen_to_be_invoked.Delay(  );
+                        LuaAPI.lua_pushnumber(L, gen_ret);
+                    
+                    
+                    
+                    return 1;
+                }
+                
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _m_ElapsedDelay(RealStatePtr L)
+        {
+		    try {
+            
+                ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
+            
+            
+                DG.Tweening.Tween gen_to_be_invoked = (DG.Tweening.Tween)translator.FastGetCSObj(L, 1);
+            
+            
+                
+                {
+                    
+                        float gen_ret = gen_to_be_invoked.ElapsedDelay(  );
                         LuaAPI.lua_pushnumber(L, gen_ret);
                     
                     
@@ -1991,7 +2023,9 @@ namespace XLua.CSObjectWrap
                 DG.Tweening.Tween gen_to_be_invoked = (DG.Tweening.Tween)translator.FastGetCSObj(L, 1);
             
             
-                
+			    int gen_param_count = LuaAPI.lua_gettop(L);
+            
+                if(gen_param_count == 2&& LuaTypes.LUA_TNUMBER == LuaAPI.lua_type(L, 2)) 
                 {
                     float _delay = (float)LuaAPI.lua_tonumber(L, 2);
                     
@@ -2002,10 +2036,24 @@ namespace XLua.CSObjectWrap
                     
                     return 1;
                 }
+                if(gen_param_count == 3&& LuaTypes.LUA_TNUMBER == LuaAPI.lua_type(L, 2)&& LuaTypes.LUA_TBOOLEAN == LuaAPI.lua_type(L, 3)) 
+                {
+                    float _delay = (float)LuaAPI.lua_tonumber(L, 2);
+                    bool _asPrependedIntervalIfSequence = LuaAPI.lua_toboolean(L, 3);
+                    
+                        DG.Tweening.Tween gen_ret = gen_to_be_invoked.SetDelay( _delay, _asPrependedIntervalIfSequence );
+                        translator.Push(L, gen_ret);
+                    
+                    
+                    
+                    return 1;
+                }
                 
             } catch(System.Exception gen_e) {
                 return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
             }
+            
+            return LuaAPI.luaL_error(L, "invalid arguments to DG.Tweening.Tween.SetDelay!");
             
         }
         
@@ -2164,6 +2212,20 @@ namespace XLua.CSObjectWrap
 			
                 DG.Tweening.Tween gen_to_be_invoked = (DG.Tweening.Tween)translator.FastGetCSObj(L, 1);
                 LuaAPI.lua_pushnumber(L, gen_to_be_invoked.fullPosition);
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            return 1;
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _g_get_hasLoops(RealStatePtr L)
+        {
+		    try {
+                ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
+			
+                DG.Tweening.Tween gen_to_be_invoked = (DG.Tweening.Tween)translator.FastGetCSObj(L, 1);
+                LuaAPI.lua_pushboolean(L, gen_to_be_invoked.hasLoops);
             } catch(System.Exception gen_e) {
                 return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
             }
@@ -2422,6 +2484,20 @@ namespace XLua.CSObjectWrap
             return 1;
         }
         
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _g_get_debugTargetId(RealStatePtr L)
+        {
+		    try {
+                ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
+			
+                DG.Tweening.Tween gen_to_be_invoked = (DG.Tweening.Tween)translator.FastGetCSObj(L, 1);
+                LuaAPI.lua_pushstring(L, gen_to_be_invoked.debugTargetId);
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            return 1;
+        }
+        
         
         
         [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
@@ -2672,6 +2748,21 @@ namespace XLua.CSObjectWrap
 			
                 DG.Tweening.Tween gen_to_be_invoked = (DG.Tweening.Tween)translator.FastGetCSObj(L, 1);
                 gen_to_be_invoked.easePeriod = (float)LuaAPI.lua_tonumber(L, 2);
+            
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            return 0;
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _s_set_debugTargetId(RealStatePtr L)
+        {
+		    try {
+                ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(L);
+			
+                DG.Tweening.Tween gen_to_be_invoked = (DG.Tweening.Tween)translator.FastGetCSObj(L, 1);
+                gen_to_be_invoked.debugTargetId = LuaAPI.lua_tostring(L, 2);
             
             } catch(System.Exception gen_e) {
                 return LuaAPI.luaL_error(L, "c# exception:" + gen_e);

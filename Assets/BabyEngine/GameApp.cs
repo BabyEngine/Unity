@@ -9,18 +9,41 @@ using XLua;
 
 namespace BabyEngine {
     public class GameApp : MonoBehaviour {
-        private LuaEnv lua = new LuaEnv();
+#if UNITY_EDITOR
+        public int lastTab = 0;
+#endif
+        #region VARS
         public string MainGameApp;
         public string CustomSearchPath;
-        
+        public TextAsset textAsset;
+        #endregion
+        private LuaEnv lua = new LuaEnv();
+
+        public LuaFunction onLowMemory;
+        public LuaFunction onApplicationFocus;
+        public LuaFunction onApplicationPause;
+        public LuaFunction onApplicationQuit;
+
+
+
         private void Awake() {
-            // load pb
             lua.AddBuildin("pb", XLua.LuaDLL.Lua.LoadPB);
-            // 检查是否展开文件
-            InitManager();
-            Screen.fullScreen = true;
-            Screen.SetResolution(Display.main.systemWidth, Display.main.systemHeight, true, 60);
+            lua.AddBuildin("rapidjson", XLua.LuaDLL.Lua.LoadRapidJson);
+            lua.AddBuildin("lpeg", XLua.LuaDLL.Lua.LoadLPeg);
+            lua.AddBuildin("ffi", XLua.LuaDLL.Lua.LoadFFI);
+            lua.AddBuildin("serialize", XLua.LuaDLL.Lua.LoadSerialize);
+            Application.lowMemory += OnLowMemory;
+
+            StartCoroutine(runMoniter());
         }
+
+        private IEnumerator runMoniter() {
+            while (true) {
+                lua.Tick();
+                yield return new WaitForSeconds(1);
+            }
+        }
+
         bool isStart = false;
         private void Start() {
             PerfomLuaStart();
@@ -31,12 +54,26 @@ namespace BabyEngine {
                 return;
             isStart = true;
             InitLua();
-            Invoke("RunLua", 0);
+            RunLua();
+            //Invoke("RunLua", 0);
+        } 
+        private void InitManagers() {
+            AddManager<ResourceManager>("ResourceManager");
+            AddManager<LooperManager>("LooperManager");
+            AddManager<NetworkManager>("NetworkManager");
         }
-
-        private void InitManager() {
-            gameObject.AddComponent<ResourceManager>();
-            gameObject.AddComponent<LooperManager>();
+        Dictionary<string, IManager> managersMap = new Dictionary<string, IManager>();
+        private void AddManager<T> (string name) where T : IManager {
+            var comp = gameObject.AddComponent<T>();
+            comp.getManagerHandler = this.GetManager;
+            lua.Global.Set(name, comp);
+        }
+        
+        public IManager GetManager(string name) {
+            if (managersMap.ContainsKey(name)) {
+                return managersMap[name];
+            }
+            return null;
         }
 
         private void InitLua() {
@@ -48,24 +85,52 @@ namespace BabyEngine {
                 GameConf.CustomLuaGame = CustomSearchPath;
                 luaCode = $"package.path=package.path ..';{GameConf.LUA_BASE_PATH}?.lua;{CustomSearchPath}?.lua;{Application.persistentDataPath}?.lua;{Application.streamingAssetsPath}?.lua;'";
             }
-            
+            lua.Global.Set("GameApp", this);
             lua.DoString(luaCode);
-
-            lua.Global.Set("ResourceManager", ResourceManager.Get());
-            lua.Global.Set("LooperManager", LooperManager.Get());
-            lua.DoString("BabyEngine = BabyEngine or {}\nrequire('framework.init')");
+            InitManagers();
         }
 
         private void RunLua() {
+            if (textAsset != null) {
+                lua.DoString(textAsset.text);
+                return;
+            }
+            lua.DoString("require('framework.init')");
             lua.DoString($"local ok, ret = pcall(require, '{MainGameApp}')" +
-                $"if not ok then " +
-                $"  print(ret)" +
-                $"  BabyEngine.CallUpdateHelp() " +
+                $"if not ok and GameApp then " +
+                $"  GameApp:OnError(ret)" +
                 $"end");
         }
 
-        public void DoLuaString(string code) {
-            lua.DoString(code);
+        public void OnError(string err) {
+            Debug.LogError("发生错误:" + err);
+        }
+        
+        private void OnLowMemory() {
+            Resources.UnloadUnusedAssets();
+            onLowMemory?.Call();
+        }
+
+        void OnApplicationFocus(bool hasFocus) {
+            onApplicationFocus?.Call(hasFocus);
+        }
+
+        void OnApplicationPause(bool pauseStatus) {
+            onApplicationPause?.Call(pauseStatus);
+        }
+        void OnApplicationQuit() {
+            try {
+                onApplicationQuit?.Call();
+            } finally {
+                Resources.UnloadUnusedAssets();
+                System.GC.Collect();
+                System.GC.WaitForPendingFinalizers();
+                if (lua != null) {
+                    lua.Tick();
+                    lua.FullGc();
+                }
+                lua = null;
+            }
         }
     }
 }

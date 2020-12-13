@@ -31,7 +31,7 @@ namespace XLua.CSObjectWrap
 			Utils.EndObjectRegister(type, L, translator, null, null,
 			    null, null, null);
 
-		    Utils.BeginClassRegister(type, L, __CreateInstance, 45, 19, 19);
+		    Utils.BeginClassRegister(type, L, __CreateInstance, 45, 21, 21);
 			Utils.RegisterFunc(L, Utils.CLS_IDX, "Init", _m_Init_xlua_st_);
             Utils.RegisterFunc(L, Utils.CLS_IDX, "SetTweensCapacity", _m_SetTweensCapacity_xlua_st_);
             Utils.RegisterFunc(L, Utils.CLS_IDX, "Clear", _m_Clear_xlua_st_);
@@ -80,6 +80,7 @@ namespace XLua.CSObjectWrap
             Utils.RegisterObject(L, translator, Utils.CLS_IDX, "Version", DG.Tweening.DOTween.Version);
             
 			Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "logBehaviour", _g_get_logBehaviour);
+            Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "debugStoreTargetId", _g_get_debugStoreTargetId);
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "useSafeMode", _g_get_useSafeMode);
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "nestedTweenFailureBehaviour", _g_get_nestedTweenFailureBehaviour);
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "showUnityEditorReport", _g_get_showUnityEditorReport);
@@ -88,6 +89,7 @@ namespace XLua.CSObjectWrap
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "maxSmoothUnscaledTime", _g_get_maxSmoothUnscaledTime);
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "onWillLog", _g_get_onWillLog);
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "drawGizmos", _g_get_drawGizmos);
+            Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "debugMode", _g_get_debugMode);
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "defaultUpdateType", _g_get_defaultUpdateType);
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "defaultTimeScaleIndependent", _g_get_defaultTimeScaleIndependent);
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "defaultAutoPlay", _g_get_defaultAutoPlay);
@@ -100,6 +102,7 @@ namespace XLua.CSObjectWrap
             Utils.RegisterFunc(L, Utils.CLS_GETTER_IDX, "instance", _g_get_instance);
             
 			Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "logBehaviour", _s_set_logBehaviour);
+            Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "debugStoreTargetId", _s_set_debugStoreTargetId);
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "useSafeMode", _s_set_useSafeMode);
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "nestedTweenFailureBehaviour", _s_set_nestedTweenFailureBehaviour);
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "showUnityEditorReport", _s_set_showUnityEditorReport);
@@ -108,6 +111,7 @@ namespace XLua.CSObjectWrap
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "maxSmoothUnscaledTime", _s_set_maxSmoothUnscaledTime);
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "onWillLog", _s_set_onWillLog);
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "drawGizmos", _s_set_drawGizmos);
+            Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "debugMode", _s_set_debugMode);
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "defaultUpdateType", _s_set_defaultUpdateType);
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "defaultTimeScaleIndependent", _s_set_defaultTimeScaleIndependent);
             Utils.RegisterFunc(L, Utils.CLS_SETTER_IDX, "defaultAutoPlay", _s_set_defaultAutoPlay);
@@ -2120,6 +2124,18 @@ namespace XLua.CSObjectWrap
         }
         
         [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _g_get_debugStoreTargetId(RealStatePtr L)
+        {
+		    try {
+            
+			    LuaAPI.lua_pushboolean(L, DG.Tweening.DOTween.debugStoreTargetId);
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            return 1;
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
         static int _g_get_useSafeMode(RealStatePtr L)
         {
 		    try {
@@ -2209,6 +2225,18 @@ namespace XLua.CSObjectWrap
 		    try {
             
 			    LuaAPI.lua_pushboolean(L, DG.Tweening.DOTween.drawGizmos);
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            return 1;
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _g_get_debugMode(RealStatePtr L)
+        {
+		    try {
+            
+			    LuaAPI.lua_pushboolean(L, DG.Tweening.DOTween.debugMode);
             } catch(System.Exception gen_e) {
                 return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
             }
@@ -2352,6 +2380,19 @@ namespace XLua.CSObjectWrap
         }
         
         [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _s_set_debugStoreTargetId(RealStatePtr L)
+        {
+		    try {
+                
+			    DG.Tweening.DOTween.debugStoreTargetId = LuaAPI.lua_toboolean(L, 1);
+            
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            return 0;
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
         static int _s_set_useSafeMode(RealStatePtr L)
         {
 		    try {
@@ -2449,6 +2490,19 @@ namespace XLua.CSObjectWrap
 		    try {
                 
 			    DG.Tweening.DOTween.drawGizmos = LuaAPI.lua_toboolean(L, 1);
+            
+            } catch(System.Exception gen_e) {
+                return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
+            }
+            return 0;
+        }
+        
+        [MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+        static int _s_set_debugMode(RealStatePtr L)
+        {
+		    try {
+                
+			    DG.Tweening.DOTween.debugMode = LuaAPI.lua_toboolean(L, 1);
             
             } catch(System.Exception gen_e) {
                 return LuaAPI.luaL_error(L, "c# exception:" + gen_e);
