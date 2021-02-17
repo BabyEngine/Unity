@@ -16,6 +16,7 @@ function LuaUtils.Find(transform, name)
     end
     local tra
     if transform then
+        transform = transform.transform
         tra = transform:Find(name)
     else
         -- return CS.UnityEngine.GameObject.Find(name)
@@ -40,6 +41,42 @@ function LuaUtils.UI.FindButton(transform, name, cb)
     return button
 end
 
+-- @luadoc 获取 长按 组件
+-- @params transform Transform the transform
+-- @params transform string    name of child
+-- @params child     function  callback
+function LuaUtils.UI.FindLongPressButton(transform, name, cb)
+    local tra = LuaUtils.Find(transform, name)
+    if not tra then return nil end
+    local self = {}
+    local onLongPress = function()
+        if self.onLongPress then self.onLongPress() end
+    end
+    local onLongPressPrepare = function()
+        if self.onLongPressPrepare then self.onLongPressPrepare() end
+    end
+    local onShortPress = function()
+        if self.onShortPress then self.onShortPress() end
+    end
+    local onPressLeave = function()
+        if self.onPressLeave then self.onPressLeave() end
+    end
+
+    local comp = tra.gameObject:GetComponent(typeof(CS.LongPressEventTrigger))
+    if not comp then
+        comp = tra.gameObject:AddComponent(typeof(CS.LongPressEventTrigger))
+    end
+    comp.onLongPress:AddListener(onLongPress)
+    comp.onLongPressPrepare:AddListener(onLongPressPrepare)
+    comp.onShortPress:AddListener(onShortPress)
+    comp.onPressLeave:AddListener(onPressLeave)
+    function self.GetProgress()
+        return comp.Progress
+    end
+    return self
+end
+
+
 -- @luadoc 获取 Text 组件
 -- @params transform Transform the transform
 -- @params transform string    name of child
@@ -47,6 +84,15 @@ function LuaUtils.UI.FindText(transform, name)
     local node = LuaUtils.Find(transform, name)
     if not node then return end
     return node:GetComponent(typeof(CS.UnityEngine.UI.Text))
+end
+
+-- @luadoc 获取 Text 组件
+-- @params transform Transform the transform
+-- @params transform string    name of child
+function LuaUtils.UI.FindTextMesh(transform, name)
+    local node = LuaUtils.Find(transform, name)
+    if not node then return end
+    return node:GetComponent(typeof(CS.TMPro.TextMeshProUGUI))
 end
 
 -- @luadoc 获取 Image 组件
@@ -277,10 +323,54 @@ function LuaUtils.Game.FindAnimation(transform, name)
     return node:GetComponent(typeof(CS.UnityEngine.Animation))
 end
 
+-- @luadoc 获取 Light 组件
+-- @params transform Transform the transform
+-- @params transform string    name of child
+function LuaUtils.Game.FindLight(transform, name)
+    local node = LuaUtils.Find(transform, name)
+    if not node then return end
+    return node:GetComponent(typeof(CS.UnityEngine.Light))
+end
+
 --@luadoc 震动
 function LuaUtils.Vibrate()
     if CS.UnityEngine.Application.isMobilePlatform then
         CS.UnityEngine.Handheld.Vibrate()
+    end
+end
+
+function LuaUtils.SetActive( tra, path, b)
+    if not tra then return end
+    if type(path) == 'string' and type(b) == 'boolean' then
+        local go = LuaUtils.Find(tra.transform, path)
+        if go then
+            go.gameObject:SetActive(b == true)
+        end
+    end
+    if type(path) == 'boolean' then
+        b = path
+        tra.gameObject:SetActive(b == true)
+    end
+end
+
+function LuaUtils.SetActives( objs, b)
+    if type(objs) ~= 'table' then return end
+    for i,v in ipairs(objs) do
+        v.gameObject:SetActive(b == true)
+    end
+end
+
+function LuaUtils.Destroy( objs)
+    if type(objs) ~= 'table' then return end
+    for i,v in ipairs(objs) do
+        Destroy(v.gameObject)
+    end
+end
+
+function LuaUtils.FindCamera( tra, path )
+    local tra = LuaUtils.Find(tra, path)
+    if tra then
+        return tra.gameObject:GetComponent(typeof(CS.UnityEngine.Camera))
     end
 end
 
@@ -347,4 +437,13 @@ function MakeTimeout( self, period, cb )
         return t
     end
     if cb then cb() end
+end
+
+function format_int(number)
+  local i, j, minus, int, fraction = tostring(number):find('([-]?)(%d+)([.]?%d*)')
+  -- reverse the int-string and append a comma to all blocks of 3 digits
+  int = int:reverse():gsub("(%d%d%d)", "%1,")
+  -- reverse the int-string back remove an optional comma and put the
+  -- optional minus and fractional part back
+  return minus .. int:reverse():gsub("^,", "") .. fraction
 end

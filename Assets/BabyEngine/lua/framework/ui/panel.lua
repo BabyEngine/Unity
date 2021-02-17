@@ -116,7 +116,7 @@ function PanelBase(path, level)
         end
     end
 
-    function self.Hide()
+    function self.Hide(cb)
         if not isShown then return end
         if self.gameObject then
             self.gameObject:SetActive(false)
@@ -130,6 +130,9 @@ function PanelBase(path, level)
         end
         if type(afterHide) == 'function' then
             self.afterHide()
+        end
+        if cb then
+            cb()
         end
     end
 

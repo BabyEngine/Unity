@@ -11,6 +11,7 @@ public class ReuseScrollView : ReuseScrollViewBase<ReuseScollViewItemData> {
     public void Init(GameObject prefab, int count, LuaFunction cb) {
         callback = cb;
         cellObject = prefab;
+        lastID = 1;
         var items = new List<ReuseScollViewItemData>();
         for(int i=0; i < count;i++) {
             items.Add(new ReuseScollViewItemData { id = lastID++, cb = callback });

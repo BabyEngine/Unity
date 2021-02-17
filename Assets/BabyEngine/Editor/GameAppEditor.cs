@@ -29,12 +29,12 @@ namespace BabyEngine {
         private void EditorTab() {
             using (new VerticalBlock()) {
                 using (new HorizontalBlock()) {
-                    GUILayout.Label("÷˜»Îø⁄", EditorStyles.boldLabel, GUILayout.Width(80f));
+                    GUILayout.Label("‰∏ªÂÖ•Âè£", EditorStyles.boldLabel, GUILayout.Width(80f));
                     gameApp.MainGameApp = EditorGUILayout.TextField(gameApp.MainGameApp);
                 }
 
                 using (new HorizontalBlock()) {
-                    GUILayout.Label("œÓƒø¬∑æ∂", EditorStyles.boldLabel, GUILayout.Width(80f));
+                    GUILayout.Label("È°πÁõÆË∑ØÂæÑ", EditorStyles.boldLabel, GUILayout.Width(80f));
                     gameApp.CustomSearchPath = EditorGUILayout.TextField(gameApp.CustomSearchPath);
                 }
             }
@@ -42,14 +42,14 @@ namespace BabyEngine {
 
         private void RunTextAsset() {
             using (new HorizontalBlock()) {
-                GUILayout.Label("π“‘ÿ‘À––", EditorStyles.boldLabel, GUILayout.Width(50f));
+                GUILayout.Label("ÊåÇËΩΩËøêË°å", EditorStyles.boldLabel, GUILayout.Width(50f));
                 gameApp.textAsset = (TextAsset)EditorGUILayout.ObjectField(gameApp.textAsset, typeof(TextAsset), true);
             }
         }
 
         private void RunAssetBundle() {
             using (new HorizontalBlock()) {
-                GUILayout.Label("AB∞¸‘À––", EditorStyles.boldLabel, GUILayout.Width(100f));
+                GUILayout.Label("ABÂåÖËøêË°å", EditorStyles.boldLabel, GUILayout.Width(100f));
                 gameApp.MainGameApp = EditorGUILayout.TextField(gameApp.MainGameApp);
 
             }

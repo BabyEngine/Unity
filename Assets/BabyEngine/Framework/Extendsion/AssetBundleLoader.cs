@@ -12,7 +12,11 @@ namespace BabyEngine {
         static Dictionary<string, AssetBundle> assetBundles = new Dictionary<string, AssetBundle>();
         public static void Reset( bool b ) {
             foreach (var kv in assetBundles) {
-                kv.Value.Unload(b);
+                try {
+                    kv.Value.Unload(b);
+                } catch(Exception e) {
+                    Debug.LogError(e);
+                }
             }
             assetBundles.Clear();
         }
@@ -42,6 +46,13 @@ namespace BabyEngine {
                 string md5Hash = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
                 return md5Hash;
             }
+        }
+        public static void Unload(string name, bool unloadAllObjects) {
+            if (!assetBundles.ContainsKey(name)) {
+                return;
+            }
+            assetBundles[name].Unload(unloadAllObjects);
+            assetBundles.Remove(name);
         }
         public static AssetBundle LoadFromMemory(string name, byte[] data, bool isForceRaw = false) {
             if (assetBundles.ContainsKey(name)) {

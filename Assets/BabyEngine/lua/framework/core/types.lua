@@ -14,6 +14,7 @@ Screen      = CS.UnityEngine.Screen
 Mathf       = CS.UnityEngine.Mathf
 Canvas      = CS.UnityEngine.Canvas
 NewObject   = CS.UnityEngine.Object.Instantiate
+RaycastEventHandler = CS.RaycastEventHandler
 function Destroy( ... )
     local gameObject = select(1, ...)
     if gameObject == nil or CS.UnityEngine.GameObject.ReferenceEquals(gameObject, nil) then return end

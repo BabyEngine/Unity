@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
-using UnityEngine.Assertions;
-using UnityEngine.Networking;
 using XLua;
 
 namespace BabyEngine {
@@ -24,14 +20,14 @@ namespace BabyEngine {
         public LuaFunction onApplicationPause;
         public LuaFunction onApplicationQuit;
 
-
-
         private void Awake() {
+            Application.targetFrameRate = 60;
             lua.AddBuildin("pb", XLua.LuaDLL.Lua.LoadPB);
             lua.AddBuildin("rapidjson", XLua.LuaDLL.Lua.LoadRapidJson);
             lua.AddBuildin("lpeg", XLua.LuaDLL.Lua.LoadLPeg);
             lua.AddBuildin("ffi", XLua.LuaDLL.Lua.LoadFFI);
             lua.AddBuildin("serialize", XLua.LuaDLL.Lua.LoadSerialize);
+            lua.AddBuildin("cmsgpack", XLua.LuaDLL.Lua.LoadCMSGPack);
             Application.lowMemory += OnLowMemory;
 
             StartCoroutine(runMoniter());

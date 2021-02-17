@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.Advertisements;
+using UnityEngine.Animations;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using XLua;
@@ -109,6 +110,9 @@ public static class XLuaCustomExport {
                 typeof(UnityEngine.UI.ContentSizeFitter),
                 typeof(UnityEngine.UI.AspectRatioFitter),
 
+                typeof(TMPro.TextMeshProUGUI),
+                typeof(TMPro.TextMeshPro),
+
                 typeof(UnityEngine.UI.Toggle.ToggleEvent),
                 typeof(UnityEngine.UI.Dropdown.DropdownEvent),
                 typeof(UnityEngine.UI.Slider.SliderEvent),
@@ -124,6 +128,14 @@ public static class XLuaCustomExport {
                 typeof(UnityEngine.GUI),
                 typeof(UnityEngine.GUIUtility),
                 typeof(UnityWebRequestCachingExtensions),
+
+                typeof(AnimationClipPlayable),
+                typeof(UnityEngine.Animations.PositionConstraint),
+                typeof(UnityEngine.Animations.RotationConstraint),
+                typeof(UnityEngine.Animations.LookAtConstraint),
+                typeof(UnityEngine.Animations.ScaleConstraint),
+                typeof(UnityEngine.Animations.ParentConstraint),
+                typeof(UnityEngine.Animations.ConstraintSource),
 #if ENABLE_UNITY_ADS
         //Unity Ads
         typeof(UnityEngine.Advertisements.Advertisement),

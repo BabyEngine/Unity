@@ -51,5 +51,14 @@
             return luaopen_serialize(L);
         }
         #endregion
+
+        #region luaopen_cmsgpack
+        [DllImport(LUADLL, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int luaopen_cmsgpack(System.IntPtr L);
+        [MonoPInvokeCallback(typeof(LuaDLL.lua_CSFunction))]
+        public static int LoadCMSGPack(System.IntPtr L) {
+            return luaopen_cmsgpack(L);
+        }
+        #endregion
     }
 }

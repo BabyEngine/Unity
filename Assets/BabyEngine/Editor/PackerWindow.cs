@@ -144,7 +144,7 @@ namespace BabyEngine {
                 var ab = AssetBundleLoader.LoadFromMemory("init.dat", enc_data);
                 if (ab != null) {
                     Debug.Log("加载成功" + ab.GetAllAssetNames().Length);
-                    ab.Unload(true);
+                    AssetBundleLoader.Unload("init.dat", true);
                 } else {
                     Debug.LogError($"校验文件失败{savePath}");
                 }
@@ -486,10 +486,10 @@ namespace BabyEngine {
                 EditorUtility.DisplayDialog("提示", $"发布结束,成功{cos_ok_count} 失败:{cos_failed_count}", "确认");
             });
         }
-        void doUploadCOS(CosXml cosXml, string localFile, string removePath) {
+        void doUploadCOS(CosXml cosXml, string localFile, string remotePath) {
             TransferConfig transferConfig = new TransferConfig();
             TransferManager transferManager = new TransferManager(cosXml, transferConfig);
-            COSXMLUploadTask uploadTask = new COSXMLUploadTask(cos_bucketName, removePath);
+            COSXMLUploadTask uploadTask = new COSXMLUploadTask(cos_bucketName, remotePath);
             uploadTask.SetSrcPath(localFile);
             uploadTask.progressCallback = delegate (long completed, long total) {
                 //Debug.Log($"{removePath} progress = {completed * 100.0 / total}");
@@ -497,13 +497,15 @@ namespace BabyEngine {
             uploadTask.successCallback = delegate (CosResult cosResult) {
                 COSXMLUploadTask.UploadTaskResult result = cosResult
                   as COSXMLUploadTask.UploadTaskResult;
-                //Debug.Log(result.GetResultInfo());
-                //string eTag = result.eTag;
+                Debug.Log(result.GetResultInfo());
+                string eTag = result.eTag;
+                
                 lock (cos_lock) {
+                    Debug.Log($"Upload: {eTag} {localFile} => {remotePath}");
                     cos_ok_count++;
                 }
                 cosPostUpload();
-                Debug.Log($"上传状态: {removePath} {result.GetResultInfo()} ");
+                Debug.Log($"上传状态: {remotePath} {result.GetResultInfo()} ");
             };
             uploadTask.failCallback = delegate (CosClientException clientEx, CosServerException serverEx) {
                 lock (cos_lock) {
@@ -511,10 +513,10 @@ namespace BabyEngine {
                 }
                 cosPostUpload();
                 if (clientEx != null) {
-                    Debug.LogError("CosClientException: " + clientEx);
+                    Debug.LogError(localFile + "\nCosClientException: " + clientEx);
                 }
                 if (serverEx != null) {
-                    Debug.LogError("CosServerException: " + serverEx.GetInfo());
+                    Debug.LogError(localFile + "\nCosServerException: " + serverEx.GetInfo());
                 }
             };
             transferManager.Upload(uploadTask);

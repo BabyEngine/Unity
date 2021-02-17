@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -130,6 +131,26 @@ namespace BabyEngine {
         }
         #endregion
 
-        
+        public static void DelayAction(this MonoBehaviour mono, float sec, Action cb) {
+            mono.StartCoroutine(DoYield(new WaitForSeconds(sec), cb));
+        }
+        public static IEnumerator DoYield(YieldInstruction y, Action cb) {
+            yield return y;
+            cb?.Invoke();
+        }
+        public static string[] StartsWith(this string[] strings, string prefix) {
+            return strings.Where(item => item.StartsWith(prefix)).ToArray();
+        }
+        public static string[] EndsWith(this string[] strings, string prefix) {
+            return strings.Where(item => item.EndsWith(prefix)).ToArray();
+        }
+        public static string[] Replace(this string[] strings, string a, string b) {
+            return (from line in strings
+                        select line.Replace(a, b)).ToArray();
+
+        }
+        public static string[] Sort(this string[] strings) {
+            return strings.OrderBy(x => x).ToArray();
+        }
     }
 }

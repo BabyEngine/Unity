@@ -185,6 +185,12 @@ function table.merge(a, b )
     return deepmerge(nil, a, b)
 end
 
+function table.random( tbl )
+    local sz = #tbl
+    if sz == 0 then return nil end
+    return tbl[math.random(sz)]
+end
+
 string.replace = function(s, pattern, repl)
     local i,j = string.find(s, pattern, 1, true)
     if i and j then

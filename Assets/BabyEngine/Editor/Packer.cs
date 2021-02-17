@@ -241,7 +241,8 @@ namespace BabyEngine {
         }
 
         static void AddABFile(string type, string filepath, string originFileName) {
-            versionInfo.files = versionInfo.files.Append(new VersionFile { Type = type, Path = filepath }).ToArray();
+            var info = new VersionFile { Type = type, Path = filepath, Local = originFileName };
+            versionInfo.files = versionInfo.files.Append(info).ToArray();
         }
         private static void DeleteDir( string dir ) {
             if (Directory.Exists(dir)) {
@@ -331,7 +332,7 @@ namespace BabyEngine {
             public string Hash;
             public long   Size;
             public string Path;
-
+            public string Local;
         }
         public static void ResetBuildStatus() {
             DeleteDir(ReleaseOutputDir);

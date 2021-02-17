@@ -5,6 +5,7 @@ using System;
 /// <summary>
 /// RSA 加解密类
 /// </summary>
+[XLua.LuaCallCSharp]
 public class RSAHelper {
 
     /// <summary>
