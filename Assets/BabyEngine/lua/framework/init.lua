@@ -16,6 +16,7 @@ require('framework.net.binaryProtocol')
 require('framework.net.KCPBinaryClient')
 require('framework.net.LogCapture')
 require('framework.net.SocketIO')
+require('framework.net.KCPClient')
 PRINT_BACKTRACE = true
 
 local o_print = print
