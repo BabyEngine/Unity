@@ -3,9 +3,7 @@
 .vs/
 Library/
 Temp/
-Assets/Game/*.meta
-Assets/Game/
-android.apk
+*.apk
 obj/
 Assets/Resources/baby_version.txt
 Assets/ABs.meta

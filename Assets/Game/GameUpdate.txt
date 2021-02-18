@@ -1,0 +1,617 @@
+local File              = CS.System.IO.File
+local Path              = CS.System.IO.Path
+local Directory         = CS.System.IO.Directory
+local Object            = CS.UnityEngine.Object
+local Application       = CS.UnityEngine.Application
+local UnityWebRequest   = CS.UnityEngine.Networking.UnityWebRequest
+local UploadHandlerRaw   = CS.UnityEngine.Networking.UploadHandlerRaw
+local Utility           = CS.BabyEngine.Utility
+local AssetBundleLoader = CS.BabyEngine.AssetBundleLoader
+
+local json = require('rapidjson')
+
+local FIXED_VERSION_CONTROL_BASE_URL = 'https://example.com/debug/%s/v20210125_100102/'
+local FIXED_VERSION_CONTROL_URL      = 'https://example.com/version.json'
+
+local DYNAMIC_VERSION_CONTROL_URL = 'https://example.com/version' -- 使用动态的版本控制, 入口 URL
+
+local USING_FIXED_VERSION_CONTROL = true -- 固定版本控制, 只通过 CDN 控制热更的分发
+local IS_EDITOR_DEBUG = false -- 是否调试
+local View
+
+-- 提交的版本信息
+function getConfigData()
+    return {
+            token = '79e82ac8-084c-11eb-adc1-0242ac120002',
+            platform = getPlatformName(),
+            appVersion = Application.version,
+            unityVersion = Application.unityVersion,
+        }
+end
+
+local function isFastMode()
+    if IS_EDITOR_DEBUG then return false end
+    local platformName = Application.platform:ToString()
+    if platformName == 'OSXEditor' or platformName == 'WindowsEditor' then
+        return true
+    end
+    return false
+end
+
+-- ==========================================================================================
+function table.tostring(data)
+    -- cache of tables already printed, to avoid infinite recursive loops
+    local tablecache = {}
+    local buffer = ""
+    local padder = "    "
+
+    local function dump(d, depth)
+        local t = type(d)
+        local str = tostring(d)
+        if (t == "table") then
+            if (tablecache[str]) then
+                -- table already dumped before, so we dont
+                -- dump it again, just mention it
+                buffer = buffer.."<"..str..">\n"
+            else
+                tablecache[str] = (tablecache[str] or 0) + 1
+                buffer = buffer.."("..str..") {\n"
+                for k, v in pairs(d) do
+                    buffer = buffer..string.rep(padder, depth + 1) .. "["..k.."] => "
+                    dump(v, depth + 1)
+                end
+                buffer = buffer..string.rep(padder, depth) .. "}\n"
+            end
+        elseif (t == "number") then
+            buffer = buffer.."("..t..") "..str.."\n"
+        else
+            buffer = buffer.."("..t..") \""..str.."\"\n"
+        end
+    end
+    dump(data, 0)
+    return buffer
+end
+
+string.replace = function(s, pattern, repl)
+    local i,j = string.find(s, pattern, 1, true)
+    if i and j then
+        local ret = {}
+        local start = 1
+        while i and j do
+            table.insert(ret, string.sub(s, start, i - 1))
+            table.insert(ret, repl)
+            start = j + 1
+            i,j = string.find(s, pattern, start, true)
+        end
+        table.insert(ret, string.sub(s, start))
+        return table.concat(ret)
+    end
+    return a
+end
+
+function string.split (inputstr, sep)
+    if type(inputstr) ~= 'string' then return end
+    if sep == nil then
+        sep = "%s"
+    end
+    local t = {}
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+        table.insert(t, str)
+    end
+    return t
+end
+
+local function byteString(n)
+    local unit = ''
+    if n > 1024 then
+        unit = 'K'
+        n = n / 1024
+    end
+    if n > 1024 then
+        unit = 'M'
+        n = n / 1024
+    end
+    if n > 1024 then
+        unit = 'G'
+        n = n / 1024
+    end
+    n = string.format("%.2f", n)
+    return n .. unit
+end
+-- ==========================================================================================
+
+function getPlatformName()
+    local platformName = Application.platform:ToString()
+    if platformName == 'OSXEditor' or platformName == 'WindowsEditor' then
+        platformName = 'android'
+    end
+    if IS_EDITOR_DEBUG then
+        return string.lower(platformName)
+    else
+        return string.lower(platformName)
+    end
+end
+
+local mainView
+
+local function download( url, cb )
+    local request = UnityWebRequest.Get(url)
+    NetworkManager:RunWebRequest(request, function()
+        cb(request)
+    end)
+    return request
+end
+
+local textObj
+local function ShowDownloadText( content )
+    if textObj then
+        textObj.text = content
+        return
+    end
+    local go = Utility.FindGameObject('GameUpdate/Canvas/DownloadingState/Image/Text')
+    if not go then return end
+    textObj = go.gameObject:GetComponent(typeof(CS.UnityEngine.UI.Text))
+    if not textObj then return end
+    ShowDownloadText(content)
+end
+
+local textErrorObj
+local function ShowErrorText( content )
+    if textErrorObj then
+        textErrorObj.text = content
+        return
+    end
+
+    local go = Utility.FindGameObject('GameUpdate/Canvas/ErrorState/Content/Text')
+    if not go then return end
+    textErrorObj = go.gameObject:GetComponent(typeof(CS.UnityEngine.UI.Text))
+    if not textErrorObj then return end
+    ShowDownloadText(content)
+end
+
+
+local function checkRequest( req )
+    if req.isNetworkError then
+        ShowErrorText('Network error, please try again later')
+        return false
+    end
+
+    if req.isHttpError then
+        ShowErrorText(string.format('(%d) Service is under maintenance, please try again later', req.responseCode))
+        return false
+    end
+    return true
+end
+function NewVersion()
+    local self = {
+        version = 0
+    }
+    local files = {}
+    local diff  = {}
+    self.assetFiles = {}
+    self.sourceFiles = {}
+    self.versionInfo = nil
+    local totalBytes = 0
+    local downloadedBytes = 0
+    function self.Parse( txt )
+        self.isParsed = true
+        self.versionInfo = json.decode(txt)
+        -- local lines = string.split(txt, '\n')
+        -- for i,v in ipairs(lines) do
+        --     self.parseLine( v )
+        -- end
+        if not self.versionInfo then return end
+        for i,v in ipairs(self.versionInfo.files) do
+            local info = {}
+            info.type = v.Type
+            info.hash = v.Hash
+            info.size = v.Size
+            info.path = v.Path
+            table.insert(files, info)
+            if info.type == 'lua' then
+                table.insert(self.sourceFiles, info)
+            else
+                table.insert(self.assetFiles, info)
+            end
+        end
+    end
+    function self.Get( t, key )
+        for i,v in ipairs(files) do
+            if t == 0 then
+                if v.hash == key then return v end
+            end
+            if t == 1 then
+                if v.path == key then return v end
+            end
+        end
+    end
+    function self.GetFiles()
+        return files
+    end
+    function self.To( target )
+        local addList    = {} -- 新增的文件
+        local removeList = {} -- 需要删除的文件
+        local diffList   = {} -- 差异的文件
+        -- 比较新增的文件
+        for i,v in ipairs(target.GetFiles()) do
+            local mFile = self.Get(1, v.path)
+            if not mFile then
+                -- 远程有, 本地没有
+                table.insert(addList, v)
+            end
+            if mFile then
+                -- 远程有, 本地也有, 比较差异
+                if v.hash ~= mFile.hash then
+                    table.insert(diffList, v)
+                end
+            end
+        end
+        -- 比较删除的文件
+        for i,v in ipairs(self.GetFiles()) do
+            local rFile = target.Get(1, v.path)
+            if not rFile then
+                -- 本地有, 但远程没有
+                table.insert(removeList, rFile)
+            end
+        end
+        --
+        local downloadList = {}
+
+        for i,v in ipairs(addList) do
+            table.insert(downloadList, v)
+        end
+        for i,v in ipairs(diffList) do
+            table.insert(downloadList, v)
+        end
+
+        local existFileInDownloadList = {}
+        --
+        for i,file in ipairs(downloadList) do
+            local filepath = Application.persistentDataPath .. "/assets/" .. file.path
+            if file.type == 'lua' then
+                filepath = Application.persistentDataPath .. "/source/" .. file.path
+            end
+            if File.Exists( filepath ) then
+                -- 文件已经存在, 检查本地hash, 如果一样, 把它从下载列表移除
+                local md5 = Utility.FileMD5(filepath)
+                if md5 == file.hash then
+                    table.insert(existFileInDownloadList, file)
+                end
+            end
+        end
+        for i,v in ipairs(existFileInDownloadList) do
+            for ii,vv in ipairs(downloadList) do
+                if v == vv then
+                    table.remove(downloadList, ii)
+                    break
+                end
+            end
+        end
+
+        -- 统计需要下载的流量
+        for i,v in ipairs(downloadList) do
+            totalBytes = totalBytes + v.size
+        end
+
+        return downloadList, removeList
+    end
+    function self.download(baseURL, list, cb)
+        if #list == 0 then
+            cb()
+            return
+        end
+        local file = list[1]
+        local url = baseURL .. file.path
+        -- print('下载', url)
+        self.request = download(url, function(req)
+            if not checkRequest(self.request) then
+                print('下载失败', url)
+                ShowErrorText('download error')
+                self.ShowState('error')
+                return
+            end
+            local data = self.request.downloadHandler.data
+            -- 保存文件
+            local filepath = Application.persistentDataPath .. "/assets/" .. file.path
+            if file.type == 'lua' then
+                filepath = Application.persistentDataPath .. "/source/" .. file.path
+            end
+            local dir = Path.GetDirectoryName(filepath)
+            if not Directory.Exists( dir ) then
+                Directory.CreateDirectory( dir )
+            end
+            if File.Exists( filepath ) then
+                File.Delete( filepath )
+            end
+
+            File.WriteAllBytes(filepath, data)
+            -- 更新下载进度
+
+            downloadedBytes = downloadedBytes + self.request.downloadedBytes
+            table.remove(list, 1)
+            self.download(baseURL, list, cb)
+        end)
+    end
+    function self.remove( list, cb )
+        if #list == 0 then
+            cb()
+            return
+        end
+        local file = list[1]
+        table.remove(list, 1)
+        --
+        local filepath = Application.persistentDataPath .. "/assets/" .. file.path
+        local dir = Path.GetDirectoryName(filepath)
+        if File.Exists( filepath ) then
+            File.Delete( filepath )
+        end
+        if Directory.GetFileSystemEntries(dir).Length == 0 then -- 如果文件夹是空的, 就删除文件夹
+            Directory.Delete( dir )
+        end
+        self.remove(list, cb)
+    end
+
+    function self.checkSourceDir()
+        if not self.isParsed then return end
+        -- 删除非本次更新的源代码ab包
+        local fileList = {}
+        local names = Directory.GetFileSystemEntries(Application.persistentDataPath .. "/source/")
+        for i=0,names.Length - 1 do
+            local name = names[i]
+            local flag = false
+            local filenameOnly = Path.GetFileName(name)
+            for i,v in ipairs(self.sourceFiles) do
+                if v.path == filenameOnly then
+                    flag = true
+                    break
+                end
+            end
+            if not flag then -- 需要删除的文件
+                table.insert(fileList, name)
+            end
+        end
+        for i,v in ipairs(fileList) do
+            File.Delete(v)
+        end
+        if #fileList > 0 then
+            print('删除多余文件', table.tostring(fileList))
+            print('合法文件', table.tostring(self.sourceFiles))
+        end
+    end
+
+    function self.GetDownloadProgress()
+        local d, t = self.GetDownloadBytes()
+        return d / t
+    end
+    function self.GetDownloadBytes()
+        local downloadingBytes = 0
+        if self.request then
+            downloadingBytes = self.request.downloadedBytes
+        end
+        if totalBytes == 0 then return 0, 0 end
+        return (downloadedBytes + downloadingBytes), totalBytes
+    end
+    return self
+end
+local function onUpdate()
+    if View then
+        View.OnUpdate()
+    end
+end
+local function Find(transform, name)
+    if name == nil or name == '' then
+        return transform
+    end
+    if transform then
+        return transform:Find(name)
+    else
+        return CS.UnityEngine.GameObject.Find(name)
+    end
+end
+local progressBar
+local downloadText
+local errorText
+
+-- @luadoc 获取 Button 组件
+-- @params transform Transform the transform
+-- @params transform string    name of child
+-- @params child     function  callback
+function FindButton(transform, name, cb)
+    local node = Find(transform, name)
+    if not node then return end
+    local button = node:GetComponent(typeof(CS.UnityEngine.UI.Button))
+    if button then
+        button.onClick:AddListener(cb)
+    end
+    return button
+end
+
+local function initView(cb)
+    View = {}
+    local self = View
+    self.stateView = {}
+    local state
+    function self.Init( cb )
+        local transform = Utility.FindGameObject('GameUpdate/Canvas').transform
+        -- download
+        self.stateView['download'] = Find(transform, 'DownloadingState')
+        progressBar = Find(transform, 'DownloadingState/Slider').gameObject:GetComponent(typeof(CS.UnityEngine.UI.Slider))
+        downloadText= Find(transform, 'DownloadingState/Image/Text').gameObject:GetComponent(typeof(CS.UnityEngine.UI.Text))
+        downloadText.text = 'Checking'
+        textObj = downloadText
+        progressBar.gameObject:SetActive(false)
+        -- error
+        self.stateView['error'] = Find(transform, 'ErrorState')
+        errorText= Find(transform, 'ErrorState/Content/Text').gameObject:GetComponent(typeof(CS.UnityEngine.UI.Text))
+        errorText.text = ''
+
+        FindButton(transform, 'ErrorState/Content/Retry', self.onClicked_Retry)
+        FindButton(transform, 'ErrorState/Content/Quit', self.onClicked_Quit)
+
+        if cb then cb (self) end
+    end
+
+    function self.onClicked_Retry()
+        checkingFunc(self)
+    end
+
+    function self.onClicked_Quit()
+        Application.Quit(0)
+    end
+
+    function self.ShowState( st )
+        state = st
+        for k,v in pairs(self.stateView) do
+            v.gameObject:SetActive( k == st)
+        end
+        progressBar.gameObject:SetActive(state == 'download')
+    end
+    function self.OnUpdate()
+        if state == 'download' then
+            if self.GetProgress and progressBar then
+                progressBar.value = self.GetProgress()
+            end
+            if self.GetDownloadBytes and downloadText then
+                local d, t = self.GetDownloadBytes()
+                downloadText.text = string.format('Downloading:(%s/%s)', byteString(d), byteString(t))
+            end
+        end
+    end
+
+    self.Init(cb)
+    return self
+end
+local localVersion
+local serverVersion
+local localFilepath = Application.persistentDataPath .. "/version"
+local function handleUpdateInfo(baseURL, txt, cb )
+    local diffVersion
+
+    serverVersion = NewVersion()
+    serverVersion.Parse(txt)
+
+    local downloadList, removeList = localVersion.To(serverVersion)
+    if #downloadList > 0 or #removeList > 0 then
+        ShowDownloadText('Found new game data')
+    end
+    ShowDownloadText('Downloading...')
+    View.ShowState('download')
+    View.GetProgress = localVersion.GetDownloadProgress
+    View.GetDownloadBytes = localVersion.GetDownloadBytes
+    localVersion.download(baseURL, downloadList, function()
+        -- 下载完成, 开始删除文件
+        View.ShowState('done')
+        ShowDownloadText('')
+
+        File.WriteAllText(localFilepath, txt)
+        localVersion.remove(removeList, function ()
+            cb()
+        end)
+    end)
+
+    -- if #downloadList > 0 then
+    --     print('下载列表', table.tostring(downloadList))
+    -- end
+    -- if #removeList > 0 then
+    --     print('删除列表', table.tostring(removeList))
+    -- end
+end
+
+local function startGame()
+    -- print('启动游戏')
+    if localVersion then
+        localVersion.checkSourceDir()
+    end
+
+    Utility.FindGameObject('GameApp').gameObject:SetActive(true)
+    Object.Destroy(Utility.FindGameObject('GameUpdate').gameObject)
+end
+
+function downloadUpdateInfo( url, cb )
+    print('downloadUpdateInfo', url)
+    download(url, function ( req )
+        if not checkRequest(req) then
+            ShowErrorText(tostring( req.error ))
+            cb()
+            return
+        end
+        cb(req.downloadHandler.text)
+        -- handleUpdateInfo(req.downloadHandler.text, function ()
+        --     startGame()
+        -- end)
+    end)
+end
+local function HTTPPost( url, args, cb )
+    local request = UnityWebRequest.Post(url, '')
+    local uh = UploadHandlerRaw( args )
+    request.uploadHandler = uh
+    request:SetRequestHeader("Content-Type", "application/json")
+    NetworkManager:RunWebRequest(request, function()
+        cb(request)
+    end)
+    return request
+end
+function main()
+    AssetBundleLoader.Reset()
+
+    localVersion = NewVersion()
+    if File.Exists( localFilepath ) then
+        local t = File.ReadAllText(localFilepath)
+        localVersion.Parse( t )
+    end
+
+    if isFastMode() then
+        startGame()
+        return
+    end
+    checkingFunc = function(self)
+        ShowDownloadText('Checking...')
+        self.ShowState('download')
+        if USING_FIXED_VERSION_CONTROL then
+            -- 固定版本控制
+            downloadUpdateInfo(FIXED_VERSION_CONTROL_URL, function ( txt )
+                if not txt then return end
+                local url = string.format(FIXED_VERSION_CONTROL_BASE_URL, getPlatformName())
+                handleUpdateInfo(url, txt, function ()
+                    startGame()
+                end)
+            end)
+        else
+            -- 动态版本控制
+            local opts = json.encode(getConfigData())
+            print('DYNAMIC_VERSION_CONTROL_URL', DYNAMIC_VERSION_CONTROL_URL)
+            HTTPPost(DYNAMIC_VERSION_CONTROL_URL, opts, function( req )
+                if not checkRequest(req) then
+                    self.ShowState('error')
+                    ShowErrorText(tostring( req.error ))
+                    return
+                end
+                local text = req.downloadHandler.text
+
+                local obj = json.decode(text)
+                if not obj then
+                    self.ShowState('error')
+                    ShowErrorText('server error 1')
+                    return
+                end
+                if obj.code ~= 0 then
+                    self.ShowState('error')
+                    ShowErrorText(obj.err or 'server error 2')
+                    return
+                end
+                downloadUpdateInfo(obj.url, function ( txt )
+                    if not txt then return end
+                    handleUpdateInfo(obj.baseURL, txt, function ()
+                        startGame()
+                    end)
+                end)
+            end)
+        end
+    end
+    initView(function(self)
+        LooperManager.UpdateFunc = onUpdate
+        checkingFunc(self)
+    end)
+end
+
+main()

@@ -1,0 +1,11 @@
+print('Hello World')
+local Utility = CS.BabyEngine.Utility
+local text = Utility.FindGameObject('Loader/Canvas/Text').gameObject:GetComponent(typeof(CS.UnityEngine.UI.Text))
+
+local cmsgpack = require "cmsgpack"
+local tbl = {name='BabyEngine', age=1}
+local data = cmsgpack.pack(tbl)
+
+local obj = cmsgpack.unpack(data)
+
+text.text = string.format('Name:%s Age:%d', obj.name, obj.age)

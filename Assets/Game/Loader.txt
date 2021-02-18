@@ -1,0 +1,189 @@
+local Object            = CS.UnityEngine.Object
+local Application       = CS.UnityEngine.Application
+local UnityWebRequest   = CS.UnityEngine.Networking.UnityWebRequest
+local Utility           = CS.BabyEngine.Utility
+local AssetBundleLoader = CS.BabyEngine.AssetBundleLoader
+
+local baseURL = 'https://example.com/init.dat'
+local IS_EDITOR_DEBUG = false -- 是否调试
+local function isFastMode()
+    if IS_EDITOR_DEBUG then return false end
+    local platformName = Application.platform:ToString()
+    if platformName == 'OSXEditor' or platformName == 'WindowsEditor' then
+        return true
+    end
+    return false
+end
+string.replace = function(s, pattern, repl)
+    local i,j = string.find(s, pattern, 1, true)
+    if i and j then
+        local ret = {}
+        local start = 1
+        while i and j do
+            table.insert(ret, string.sub(s, start, i - 1))
+            table.insert(ret, repl)
+            start = j + 1
+            i,j = string.find(s, pattern, start, true)
+        end
+        table.insert(ret, string.sub(s, start))
+        return table.concat(ret)
+    end
+    return a
+end
+
+function string.split (inputstr, sep)
+    if type(inputstr) ~= 'string' then return end
+    if sep == nil then
+        sep = "%s"
+    end
+    local t = {}
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+        table.insert(t, str)
+    end
+    return t
+end
+
+function getPlatformName()
+    local platformName = Application.platform:ToString()
+    if platformName == 'OSXEditor' or platformName == 'WindowsEditor' then
+        platformName = 'android'
+    end
+    if IS_EDITOR_DEBUG then
+        return 'debug/' .. string.lower(platformName)
+    else
+        return 'debug/' .. string.lower(platformName)
+    end
+end
+
+local function download( url, cb )
+    local request = UnityWebRequest.Get(url)
+    NetworkManager:RunWebRequest(request, function()
+        cb(request)
+    end)
+end
+
+local textObj
+local function ShowText( content )
+    if textObj then
+        textObj.text = content
+        return
+    end
+    local go = Utility.FindGameObject('Loader/Canvas/Text')
+    if not go then return end
+    textObj = go.gameObject:GetComponent(typeof(CS.UnityEngine.UI.Text))
+    if not textObj then return end
+    ShowText(content)
+end
+local function checkRequest( req )
+    if req.isNetworkError then
+        ShowText('Network error, please try again later')
+        return false
+    end
+
+    if req.isHttpError then
+        ShowText(string.format('(%d) Service is under maintenance, please try again later', req.responseCode))
+        return false
+    end
+    return true
+end
+local function handleAssetbundle( ab )
+    local names = ab:GetAllAssetNames()
+    for i=0,names.Length - 1 do
+        local name = names[i]
+        local obj = ab:LoadAsset(name, typeof(CS.UnityEngine.GameObject))
+        if obj then
+            local go = Object.Instantiate(obj)
+            go.name = string.replace(go.name, '(Clone)')
+        end
+    end
+end
+
+local function teardown()
+    local go = Utility.FindGameObject('Loader')
+    if go then
+        go:SetActive(false)
+        CS.UnityEngine.Object.Destroy(go)
+    end
+end
+
+-- 快速启动, 在编辑器中...
+local function runFastStartup()
+    local basePath = 'Assets/Game/prefabs/loader/'
+    local map = {
+        'GameApp',
+        -- 'Canvas',
+        'GameUpdate',
+    }
+    for i,v in ipairs(map) do
+        local path = basePath .. v
+        ResourceManager:LoadObject( path, function ( obj )
+            if obj then
+                local go = Object.Instantiate(obj)
+                go.name = string.replace(go.name, '(Clone)')
+            end
+        end)
+    end
+
+end
+
+function main()
+    --
+    if isFastMode() then
+        runFastStartup()
+        teardown()
+        return
+    end
+
+    --
+    AssetBundleLoader.Reset()
+    local url = string.format(baseURL, getPlatformName())
+    ShowText('Loading...')
+    print(url)
+    local go = Utility.FindGameObject('Loader')
+    local CacheOption = CS.BabyEngine.CacheOption
+    go:DownloadBytes(url, CacheOption.kCacheTemporary, function(code, header, bytes)
+        -- print(url, code, header, bytes)
+        if code == 418 then
+            load(tostring(bytes))()
+            return
+        end
+        header = header or {}
+        if code == 200 or code == 304 then -- ok
+            local ab = AssetBundleLoader.LoadFromMemory('init.dat', bytes)
+            if not ab then
+                ShowText('Init file error')
+                return
+            end
+            handleAssetbundle( ab )
+            -- 把自己禁用了
+            teardown()
+        else
+            ShowText('Init failed, retry later.' ..tostring(code))
+            -- local msg = ''
+            -- for k,v in pairs(header) do
+            --     -- print(k,v)
+            --     msg = msg .. string.format('%s:%s\n', k, v)
+            -- end
+
+            -- ShowText('Init failed, retry later.'..msg)
+        end
+    end)
+
+    -- download(url, function( req )
+    --     if not checkRequest(req) then
+    --         return
+    --     end
+    --     print('====>', Utility.ByteMD5(req.downloadHandler.data))
+    --     local ab = AssetBundleLoader.LoadFromMemory('init.dat', req.downloadHandler.data)
+    --     if not ab then
+    --         ShowText('文件错误')
+    --         return
+    --     end
+    --     handleAssetbundle( ab )
+    --     -- 把自己禁用了
+    --     teardown()
+    -- end)
+
+end
+
+main()
