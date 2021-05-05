@@ -63,6 +63,7 @@ namespace BabyEngine {
             var comp = gameObject.AddComponent<T>();
             comp.getManagerHandler = this.GetManager;
             lua.Global.Set(name, comp);
+            managersMap.Add(name, comp);
         }
         
         public IManager GetManager(string name) {

@@ -1,5 +1,4 @@
-local CSKCPClient = CS.KCPClient
-function KCPClient(url)
+function KCPClient()
     local self = {}
 
     local client
@@ -8,32 +7,37 @@ function KCPClient(url)
         client:Connect(addr, port)
     end
     local function OnOpen()
-        print('open...')
         if self.OnOpen then self.OnOpen() end
     end
     local function OnData(...)
-        if self.OnData then self.OnData(...) end
+        if self.OnData then 
+            local ok, ret = pcall(self.OnData, ...)
+            if not ok then
+                print(ret)
+            end
+        end
     end
     local function OnError(ex)
         if self.OnError then self.OnError(ex) end
     end
-    local function onUpdate()
-        client:Update()
-    end
     function self.Release()
-        Looper.RemoveUpdate(onUpdate)
+        client:Close()
     end
 
     function self.Send( bytes )
         client:Send(bytes)
     end
+    function self.Update( ... )
+        client:Update()
+    end
+    
+    client = NetworkManager:AddClient('kcp')
+    print('kcp', kcp)
+    client.OnOpenFunc  = OnOpen
+    client.OnDataFunc  = OnData
+    client.OnErrorFunc = OnError
 
-    client = CSKCPClient()
-    client.OnOpen = OnOpen
-    client.OnData = OnData
-    client.OnError = OnError
-
-    Looper.AddUpdate(onUpdate)
+    -- client:RunInThread(LooperManager)
 
     return self
 end

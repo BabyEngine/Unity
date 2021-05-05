@@ -13,7 +13,7 @@ function NewReuseScrollView( scrollView, cell, n, cb )
         if not comp then return end
         comp:Insert(idx)
     end
-    function self.Remove( id )
+    function self.Remove( idx )
         if not comp then return end
         comp:Remove(idx)
     end
