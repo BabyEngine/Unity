@@ -319,13 +319,13 @@ namespace BabyEngine {
             while (!www.isDone)
                 yield return true;
             
-            if (www.isNetworkError) {
+            if (www.result != UnityWebRequest.Result.Success) {
                 Debug.Log("GetTexture2D Error: " + www.error);
                 cb(-1, null, null);
                 yield break;
             }
 
-            if (www.isHttpError) {
+            if (www.result != UnityWebRequest.Result.Success) {
                 Debug.Log("GetTexture2D Error: " + www.error);
                 cb((int)www.responseCode, www.GetResponseHeaders(), null);
                 yield break;
@@ -342,8 +342,8 @@ namespace BabyEngine {
             yield return www.SendWebRequest();
             while (!www.isDone)
                 yield return true;
-          
-            if (www.isNetworkError) {
+
+            if (www.result != UnityWebRequest.Result.Success) {
                 Debug.Log("GetBytes Error: " + www.error);
                 var headers = www.GetResponseHeaders();
                 if(headers !=null) {
@@ -364,7 +364,7 @@ namespace BabyEngine {
             while (!www.isDone)
                 yield return true;
 
-            if (www.isNetworkError) {
+            if (www.result != UnityWebRequest.Result.Success) {
                 Debug.Log("GetText Error: " + www.error + "\n" + url);
                 cb((int)www.responseCode, www.GetResponseHeaders(), string.Empty);
                 yield break;
@@ -383,7 +383,7 @@ namespace BabyEngine {
             while (!www.isDone)
                 yield return true;
 
-            if (www.isNetworkError) {
+            if (www.result != UnityWebRequest.Result.Success) {
                 Debug.Log("PostJsonText Error: " + www.error + "\n" + url);
                 cb((int)www.responseCode, www.GetResponseHeaders(), string.Empty);
                 yield break;
@@ -403,7 +403,7 @@ namespace BabyEngine {
             while (!www.isDone)
                 yield return true;
 
-            if (www.isNetworkError) {
+            if (www.result != UnityWebRequest.Result.Success) {
                 Debug.Log("GetAssetBundle Error: " + www.error);
                 cb((int)www.responseCode, www.GetResponseHeaders(), null, string.Empty);
                 yield break;
@@ -446,7 +446,7 @@ namespace BabyEngine {
         public IEnumerator Start() {
             var headRequest = UnityWebRequest.Head(url);
             yield return headRequest.SendWebRequest();
-            if (headRequest.isNetworkError) {
+            if (headRequest.result != UnityWebRequest.Result.Success) {
                 OnErr?.Invoke(headRequest.error);
                 yield break;
             }
@@ -469,7 +469,7 @@ namespace BabyEngine {
                         if (isStop) {
                             break;
                         }
-                        if (request.isNetworkError) {
+                        if (headRequest.result != UnityWebRequest.Result.Success) {
                             OnErr?.Invoke(request.error);
                             break;
                         }

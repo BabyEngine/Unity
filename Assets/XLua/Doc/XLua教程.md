@@ -46,7 +46,7 @@
 
 1. 获取一个全局基本数据类型
     访问LuaEnv.Global就可以了，上面有个模版Get方法，可指定返回的类型。
-    
+
         luaenv.Global.Get<int>("a")
         luaenv.Global.Get<string>("b")
         luaenv.Global.Get<bool>("c")
@@ -66,7 +66,7 @@
         那有没有引用方式的映射呢？有，下面这个就是：
 
     2. 映射到一个interface
-    
+
         这种方式依赖于生成代码（如果没生成代码会抛InvalidCastException异常），代码生成器会生成这个interface的实例，如果get一个属性，生成代码会get对应的table字段，如果set属性也会设置对应的字段。甚至可以通过interface的方法访问lua的函数。
 
     3. 更轻量级的by value方式：映射到Dictionary<>，List<>
@@ -74,7 +74,7 @@
         不想定义class或者interface的话，可以考虑用这个，前提table下key和value的类型都是一致的。
 
     4. 另外一种by ref方式：映射到LuaTable类
-    
+
         这种方式好处是不需要生成代码，但也有一些问题，比如慢，比方式2要慢一个数量级，比如没有类型检查。
 
 3. 访问一个全局的function
@@ -93,7 +93,7 @@
         delegate的使用就更简单了，直接像个函数那样用就可以了。
 
     2. 映射到LuaFunction
-        
+
         这种方式的优缺点刚好和第一种相反。
         使用也简单，LuaFunction上有个变参的Call函数，可以传任意类型，任意个数的参数，返回值是object的数组，对应于lua的多返回值。
 
@@ -101,9 +101,9 @@
 
     1. 访问lua全局数据，特别是table以及function，代价比较大，建议尽量少做，比如在初始化时把要调用的lua function获取一次（映射到delegate）后，保存下来，后续直接调用该delegate即可。table也类似。
 
-    2. 如果lua测的实现的部分都以delegate和interface的方式提供，使用方可以完全和xLua解耦：由一个专门的模块负责xlua的初始化以及delegate、interface的映射，然后把这些delegate和interface设置到要用到它们的地方。
+    2. 如果lua侧的实现的部分都以delegate和interface的方式提供，使用方可以完全和xLua解耦：由一个专门的模块负责xlua的初始化以及delegate、interface的映射，然后把这些delegate和interface设置到要用到它们的地方。
 
-### Lua调用C#
+### Lua 调用 C#
 
 > 本章节涉及到的实例均在XLua\Tutorial\LuaCallCSharp下
 
@@ -167,11 +167,12 @@ xlua支持（通过派生类）访问基类的静态属性，静态方法，（�
 
 ##### 参数的输入输出属性（out，ref）
 
-Lua调用测的参数处理规则：C#的普通参数算一个输入形参，ref修饰的算一个输入形参，out不算，然后从左往右对应lua 调用测的实参列表；
+Lua调用侧的参数处理规则：C#的普通参数算一个输入形参，ref修饰的算一个输入形参，out不算，然后从左往右对应lua 调用侧的实参列表；
 
-Lua调用测的返回值处理规则：C#函数的返回值（如果有的话）算一个返回值，out算一个返回值，ref算一个返回值，然后从左往右对应lua的多返回值。
+Lua调用侧的返回值处理规则：C#函数的返回值（如果有的话）算一个返回值，out算一个返回值，ref算一个返回值，然后从左往右对应lua的多返回值。
 
 ##### 重载方法
+
 直接通过不同的参数类型进行重载函数的访问，例如：
 
     testobj:TestFunc(100)
@@ -190,6 +191,7 @@ Lua调用测的返回值处理规则：C#函数的返回值（如果有的话）
 和C#调用有默认值参数的函数一样，如果所给的实参少于形参，则会用默认值补上。
 
 ##### 可变参数方法
+
 对于C#的如下方法：
 
     void VariableParamsFunc(int a, params string[] strs)
@@ -243,7 +245,7 @@ C#的delegate调用：和调用普通lua函数一样
 
 ##### 64位整数支持
 
-    Lua53版本64位整数（long，ulong）映射到原生的64未整数，而luajit版本，相当于lua5.1的标准，本身不支持64位，xlua做了个64位支持的扩展库，C#的long和ulong都将映射到userdata：
+    Lua53版本64位整数（long，ulong）映射到原生的64位整数，而luajit版本，相当于lua5.1的标准，本身不支持64位，xlua做了个64位支持的扩展库，C#的long和ulong都将映射到userdata：
     
     支持在lua里头进行64位的运算，比较，打印
     

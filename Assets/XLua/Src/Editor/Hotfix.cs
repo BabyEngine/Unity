@@ -24,6 +24,10 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using System.Diagnostics;
+#if UNITY_2019_1_OR_NEWER
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+#endif
 #endif
 
 namespace XLua
@@ -467,9 +471,9 @@ namespace XLua
             {
                 invoke.Parameters.Add(new ParameterDefinition(self));
             }
-            foreach (var argType in argTypes)
+            for(int i = 0; i < argTypes.Count; i++)
             {
-                invoke.Parameters.Add(new ParameterDefinition(argType));
+                invoke.Parameters.Add(new ParameterDefinition(method.Parameters[i].Name, (method.Parameters[i].IsOut ? Mono.Cecil.ParameterAttributes.Out : Mono.Cecil.ParameterAttributes.None), argTypes[i]));
             }
             invoke.ImplAttributes = Mono.Cecil.MethodImplAttributes.Runtime;
             delegateDef.Methods.Add(invoke);
@@ -587,10 +591,16 @@ namespace XLua
 
         static bool hasGenericParameter(MethodDefinition method)
         {
-            if (method.HasGenericParameters) return true;
             if (!method.IsStatic && hasGenericParameter(method.DeclaringType)) return true;
+            return hasGenericParameterSkipDelaringType(method);
+        }
+
+        static bool hasGenericParameterSkipDelaringType(MethodDefinition method)
+        {
+            if (method.HasGenericParameters) return true;
+            //if (!method.IsStatic && hasGenericParameter(method.DeclaringType)) return true;
             if (hasGenericParameter(method.ReturnType)) return true;
-            foreach(var paramInfo in method.Parameters)
+            foreach (var paramInfo in method.Parameters)
             {
                 if (hasGenericParameter(paramInfo.ParameterType)) return true;
             }
@@ -733,6 +743,10 @@ namespace XLua
                 {
                     continue;
                 }
+                if (method.Parameters.Any(pd => pd.ParameterType.IsPointer) || method.ReturnType.IsPointer)
+                {
+                    continue;
+                }
                 if (method.Name != ".cctor" && !method.IsAbstract && !method.IsPInvokeImpl && method.Body != null && !method.Name.Contains("<"))
                 {
                     //Debug.Log(method);
@@ -759,6 +773,10 @@ namespace XLua
                         continue;
                     }
                     if (ignoreCompilerGenerated && method.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.CompilerGeneratedAttribute"))
+                    {
+                        continue;
+                    }
+                    if (method.Parameters.Any(pd => pd.ParameterType.IsPointer) || method.ReturnType.IsPointer)
                     {
                         continue;
                     }
@@ -982,6 +1000,15 @@ namespace XLua
                     }
                 }
             }
+
+            int offset = 0;
+            for (int i = 0; i < instructions.Count; i++)
+            {
+                var instruction = instructions[i];
+                instruction.Offset = offset;
+                offset += instruction.GetSize();
+            }
+
             for (int i = 0; i < instructions.Count; i++)
             {
                 var instruction = instructions[i];
@@ -1055,7 +1082,7 @@ namespace XLua
                     return m;
                 }
             }
-            return _findBase(td.BaseType, method);
+            return _findBase(getBaseType(type), method);
         }
 
         static MethodReference findBase(TypeDefinition type, MethodDefinition method)
@@ -1068,13 +1095,31 @@ namespace XLua
                     var b = _findBase(type.BaseType, method);
                     try
                     {
-                        if (hasGenericParameter(b.Resolve())) return null;
+                        if (hasGenericParameterSkipDelaringType(b.Resolve())) return null;
                     }catch { }
                     return b;
                 }
                 catch { }
             }
             return null;
+        }
+
+        static TypeReference getBaseType(TypeReference typeReference)
+        {
+            var typeDefinition = typeReference.Resolve();
+            var baseType = typeDefinition.BaseType;
+            if (typeReference.IsGenericInstance && baseType.IsGenericInstance)
+            {
+                var genericType = typeReference as GenericInstanceType;
+                var baseGenericType = baseType as GenericInstanceType;
+                var genericInstanceType = new GenericInstanceType(tryImport(typeReference, baseGenericType.ElementType));
+                foreach (var genericArgument in genericType.GenericArguments)
+                {
+                    genericInstanceType.GenericArguments.Add(genericArgument);
+                }
+                baseType = genericInstanceType;
+            }
+            return baseType;
         }
 
         const string BASE_RPOXY_PERFIX = "<>xLuaBaseProxy_";
@@ -1576,6 +1621,18 @@ namespace XLua
 
 namespace XLua
 {
+#if UNITY_2019_1_OR_NEWER
+    class MyCustomBuildProcessor : IPostBuildPlayerScriptDLLs
+    {
+        public int callbackOrder { get { return 0; } }
+        public void OnPostBuildPlayerScriptDLLs(BuildReport report)
+        {
+            var dir = Path.GetDirectoryName(report.files.Single(file => file.path.EndsWith("Assembly-CSharp.dll")).path);
+            Hotfix.HotfixInject(dir);
+        }
+    }
+#endif
+
     public static class Hotfix
     {
         static bool ContainNotAsciiChar(string s)
@@ -1590,9 +1647,16 @@ namespace XLua
             return false;
         }
 
+#if !UNITY_2019_1_OR_NEWER
         [PostProcessScene]
+#endif
         [MenuItem("XLua/Hotfix Inject In Editor", false, 3)]
         public static void HotfixInject()
+        {
+            HotfixInject("./Library/ScriptAssemblies");
+        }
+
+        public static void HotfixInject(string assemblyDir)
         {
             if (Application.isPlaying)
             {
@@ -1628,7 +1692,7 @@ namespace XLua
                 return;
             }
 
-            var assembly_csharp_path = "./Library/ScriptAssemblies/Assembly-CSharp.dll";
+            var assembly_csharp_path = Path.Combine(assemblyDir, "Assembly-CSharp.dll");
             var id_map_file_path = CSObjectWrapEditor.GeneratorConfig.common_path + "Resources/hotfix_id_map.lua.txt";
             var hotfix_cfg_in_editor = CSObjectWrapEditor.GeneratorConfig.common_path + "hotfix_cfg_in_editor.data";
 
@@ -1651,7 +1715,11 @@ namespace XLua
                 }
             }
 
+#if UNITY_2019_1_OR_NEWER
+            List<string> args = new List<string>() { assembly_csharp_path, assembly_csharp_path, id_map_file_path, hotfix_cfg_in_editor };
+#else
             List<string> args = new List<string>() { assembly_csharp_path, typeof(LuaEnv).Module.FullyQualifiedName, id_map_file_path, hotfix_cfg_in_editor };
+#endif
 
             foreach (var path in
                 (from asm in AppDomain.CurrentDomain.GetAssemblies() select asm.ManifestModule.FullyQualifiedName)
@@ -1670,7 +1738,7 @@ namespace XLua
             var idMapFileNames = new List<string>();
             foreach (var injectAssemblyPath in injectAssemblyPaths)
             {
-                args[0] = injectAssemblyPath.Replace('\\', '/');
+                args[0] = Path.Combine(assemblyDir, Path.GetFileName(injectAssemblyPath));
                 if (ContainNotAsciiChar(args[0]))
                 {
                     throw new Exception("project path must contain only ascii characters");

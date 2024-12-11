@@ -26,8 +26,8 @@ namespace BabyEngine {
             lua.AddBuildin("rapidjson", XLua.LuaDLL.Lua.LoadRapidJson);
             lua.AddBuildin("lpeg", XLua.LuaDLL.Lua.LoadLPeg);
             lua.AddBuildin("ffi", XLua.LuaDLL.Lua.LoadFFI);
-            lua.AddBuildin("serialize", XLua.LuaDLL.Lua.LoadSerialize);
-            lua.AddBuildin("cmsgpack", XLua.LuaDLL.Lua.LoadCMSGPack);
+            //lua.AddBuildin("serialize", XLua.LuaDLL.Lua.LoadSerialize);
+            //lua.AddBuildin("cmsgpack", XLua.LuaDLL.Lua.LoadCMSGPack);
             Application.lowMemory += OnLowMemory;
 
             StartCoroutine(runMoniter());

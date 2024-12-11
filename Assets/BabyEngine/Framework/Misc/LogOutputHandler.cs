@@ -53,7 +53,7 @@ public class LogOutputHandler : MonoBehaviour {
             }
             string parameters = logs.Pop();
             string url = serviceAddress + "/log?p=" + project;
-            var sendLog = UnityWebRequest.Post(url, parameters);
+            var sendLog = UnityWebRequest.PostWwwForm(url, parameters);
             yield return sendLog.SendWebRequest();
         }
         isSending = false;

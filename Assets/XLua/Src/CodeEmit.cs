@@ -207,7 +207,11 @@ namespace XLua
                 {
                     var assemblyName = new AssemblyName();
                     assemblyName.Name = "XLuaCodeEmit";
+#if NET5_0_OR_GREATER
+                    codeEmitModule = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run)
+#else
                     codeEmitModule = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run)
+#endif
                         .DefineDynamicModule("XLuaCodeEmit");
                 }
                 return codeEmitModule;
@@ -231,7 +235,7 @@ namespace XLua
             {
                 var to_be_impl = group.Key;
 
-                var method_builder = defineImplementMethod(impl_type_builder, to_be_impl, to_be_impl.Attributes, "Invoke" + (genID++));
+                var method_builder = defineImplementMethod(impl_type_builder, to_be_impl, to_be_impl.Attributes, "__Gen_Delegate_Imp" + (genID++));
 
                 emitMethodImpl(to_be_impl, method_builder.GetILGenerator(), false);
 

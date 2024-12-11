@@ -1,5 +1,5 @@
-﻿#define ENABLE_ALI_OSS
-#define ENABLE_QCLOUD_COS
+﻿//#define ENABLE_ALI_OSS
+//#define ENABLE_QCLOUD_COS
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -238,12 +238,14 @@ namespace BabyEngine {
 
             BuildUI_LocalHotPatchServer();
             GuiLine();
-
+#if ENABLE_ALI_OSS
             BuildUI_OSS();
             GuiLine();
-
+#endif
+#if ENABLE_QCLOUD_COS
             BuildUI_COS();
             GuiLine();
+#endif
         }
 
         void BuildUI_LocalHotPatchServer() {
@@ -460,7 +462,7 @@ namespace BabyEngine {
             EditorGUILayout.Space();
         }
 #endif
-        #endregion
+#endregion
 
         #region 腾讯云OSS
 #if ENABLE_ALI_OSS
@@ -607,8 +609,8 @@ namespace BabyEngine {
             EditorGUILayout.Space();
         }
 #endif
-        #endregion
-        #region Utils
+#endregion
+#region Utils
         private static List<string> DirSearch( string sDir ) {
             List<string> files = new List<string>();
             try {
